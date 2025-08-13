@@ -1,0 +1,245 @@
+# GCP Production Environment Configuration
+# This file demonstrates a production deployment on Google Cloud Platform
+
+# Global production settings
+global:
+  environment: "prod"
+  cloudProvider: "gcp"
+  imageRegistry: "us-central1-docker.pkg.dev/workfxai-prod/workfx-ai-gar-prod"
+  imagePullSecrets: ["gar-access-prod"]
+  storageClass: "premium-rwo"
+  domain: "workfx-ai.workfx.ai"
+
+# Production WorkFX services with high availability
+workfx:
+  api:
+    enabled: true
+    replicas: 3
+    resources:
+      limits:
+        cpu: "4000m"
+        memory: "8Gi"
+      requests:
+        cpu: "2000m"
+        memory: "4Gi"
+    
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    
+    ingress:
+      enabled: true
+      className: "gce"
+      annotations:
+        kubernetes.io/ingress.class: gce
+        kubernetes.io/ingress.global-static-ip-name: "workfx-ai-prod-ip"
+        cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      hosts:
+        - host: "workfx-ai.workfx.ai"
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: "workfx-ai-tls"
+          hosts:
+            - "workfx-ai.workfx.ai"
+  
+  cdc:
+    enabled: true
+    replicas: 2
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+  
+  idb:
+    enabled: true
+    replicas: 2
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+
+# Use external cloud services for production
+postgresql:
+  enabled: false
+
+externalPostgres:
+  enabled: true
+  host: "workfx-postgres-prod.region.rds.googleapis.com"
+  port: 5432
+  database: "workfx_ai"
+  username: "workfx_user"
+  password: "your-secure-production-password"
+  sslMode: "require"
+  connectionPool:
+    maxOpenConns: 50
+    maxIdleConns: 10
+    connMaxLifetime: "1h"
+
+redis:
+  enabled: false
+
+externalRedis:
+  enabled: true
+  host: "workfx-redis-prod.region.memorystore.googleapis.com"
+  port: 6379
+  password: "your-secure-production-password"
+  ssl: true
+
+elasticsearch:
+  enabled: false
+
+externalElasticsearch:
+  enabled: true
+  host: "workfx-elasticsearch-prod.region.es.amazonaws.com"
+  port: 443
+  username: "workfx-user"
+  password: "your-secure-production-password"
+  ssl: true
+
+kafka:
+  enabled: false
+
+externalKafka:
+  enabled: true
+  bootstrapServers: "workfx-kafka-prod.region.kafka.amazonaws.com:9092"
+  securityProtocol: "SASL_SSL"
+  saslMechanism: "PLAIN"
+  username: "workfx-kafka-user"
+  password: "your-secure-production-password"
+
+# Enable external storage for GCS
+externalStorage:
+  enabled: true
+  type: "gcs"
+  
+  gcs:
+    bucket: "workfx-ai-storage-prod"
+    projectId: "workfxai-prod"
+    credentials: "gcs-service-account-key-prod"
+    location: "us-central1"
+
+# Production monitoring and observability
+monitoring:
+  enabled: true
+  
+  cloudMonitoring:
+    enabled: true
+    projectId: "workfxai-prod"
+    location: "us-central1"
+  
+  cloudLogging:
+    enabled: true
+    logName: "workfx-ai-prod-logs"
+    projectId: "workfxai-prod"
+
+# Production security
+security:
+  workloadIdentity:
+    enabled: true
+    serviceAccount:
+      name: "workfx-ai-prod-sa"
+      namespace: "workfx-prod"
+  
+  iam:
+    enabled: true
+    serviceAccount:
+      annotations:
+        iam.gke.io/gcp-service-account: "workfx-ai-prod@workfxai-prod.iam.gserviceaccount.com"
+  
+  networkPolicy:
+    enabled: true
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                name: ingress-nginx
+        ports:
+          - protocol: TCP
+            port: 8000
+
+# Production backup
+backup:
+  enabled: true
+  
+  database:
+    enabled: true
+    schedule: "0 2 * * *"
+    retention: 30
+    storage:
+      type: "gcs"
+      bucket: "workfx-backups-prod"
+      path: "database"
+  
+  files:
+    enabled: true
+    schedule: "0 3 * * *"
+    retention: 90
+    storage:
+      type: "gcs"
+      bucket: "workfx-backups-prod"
+      path: "files"
+
+# Production resource quotas
+resourceQuota:
+  enabled: true
+  hard:
+    requests.cpu: "16"
+    requests.memory: "32Gi"
+    limits.cpu: "32"
+    limits.memory: "64Gi"
+    persistentvolumeclaims: "50"
+    requests.ephemeral-storage: "20Gi"
+    limits.ephemeral-storage: "40Gi"
+
+# Production scheduling and affinity
+scheduling:
+  nodeSelector:
+    cloud.google.com/gke-nodepool: "workfx-prod-pool"
+  
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: cloud.google.com/gke-nodepool
+            operator: In
+            values:
+            - "workfx-prod-pool"
+    
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - workfx-ai
+        topologyKey: topology.kubernetes.io/zone
+
+# Production maintenance
+maintenance:
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+  
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  
+  hpa:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80

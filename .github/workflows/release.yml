@@ -1,0 +1,144 @@
+name: Release Charts
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'charts/workfx-ai/Chart.yaml'
+      - 'charts/workfx-ai/values*.yaml'
+      - 'charts/workfx-ai/templates/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Chart version to release'
+        required: true
+        default: '1.0.0'
+      force:
+        description: 'Force release even if no changes'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if owner triggered the workflow
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "$GITHUB_ACTOR" != "$GITHUB_REPOSITORY_OWNER" ]; then
+            echo "Workflow can only be triggered by the repository owner."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.12.0
+
+      - name: Add chart repositories
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+
+      - name: Update dependencies
+        run: |
+          find charts -mindepth 1 -maxdepth 1 -type d | xargs -I{} helm dependency update {}
+
+      - name: Package charts
+        run: |
+          mkdir -p packaged
+          find charts -mindepth 1 -maxdepth 1 -type d | xargs -I{} helm package {} --destination packaged
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: packaged/*
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## WorkFX-AI Helm Chart Release
+            
+            **Version**: ${{ github.ref_name }}
+            **Date**: $(date)
+            
+            ### What's New
+            
+            This release includes the following improvements:
+            - Enhanced database migration support
+            - Improved multi-cloud deployment configurations
+            - Better security and monitoring configurations
+            
+            ### Installation
+            
+            ```bash
+            # Add repository
+            helm repo add workfx-ai https://your-company.com/helm-charts
+            
+            # Update repository
+            helm repo update
+            
+            # Install chart
+            helm install workfx-ai workfx-ai/workfx-ai \
+              --namespace workfx-ai \
+              --values values-azure-prod.yaml
+            ```
+            
+            ### Configuration
+            
+            The chart supports multiple environments:
+            - `values-azure-dev.yaml` - Azure Development Environment
+            - `values-azure-prod.yaml` - Azure Production Environment
+            - `values-gcp.yaml` - Google Cloud Platform
+            - `values-on-premise.yaml` - On-Premise Deployment
+            
+            ### Dependencies
+            
+            This chart includes the following optional dependencies:
+            - PostgreSQL 12.5.6
+            - Redis 17.3.2
+            - RabbitMQ 11.8.0
+            - Elasticsearch 8.5.1
+            - Kibana 8.5.1
+            
+            ### Support
+            
+            For support and questions, please contact:
+            - Email: support@workfx.ai
+            - Documentation: https://docs.workfx.ai
+            - GitHub Issues: https://github.com/your-org/workfx-ai-helm/issues
+
+      - name: Update Chart Repository Index
+        run: |
+          # Create repository index
+          helm repo index packaged --url https://your-company.com/helm-charts
+          
+          # Upload to your Helm repository service
+          # This step depends on your Helm repository setup
+          echo "Chart repository index updated"
+          echo "Please upload the packaged/ directory to your Helm repository service"
+
+      - name: Notify Release
+        run: |
+          echo "🎉 Chart release completed successfully!"
+          echo "📦 Packaged charts are available in the packaged/ directory"
+          echo "📋 Release notes have been created on GitHub"
+          echo "🔗 Next steps:"
+          echo "   1. Upload packaged/ directory to your Helm repository service"
+          echo "   2. Update your Helm repository index"
+          echo "   3. Notify users about the new release"

@@ -1,0 +1,469 @@
+# Azure Production Environment Configuration for WorkFX-AI
+# This file contains Azure-specific configurations for production environment
+
+# Global configuration for Azure Prod
+global:
+  environment: "prod"
+  cloudProvider: "azure"
+  imageRegistry: "tpacrprodeastus.azurecr.io"
+  storageClass: "managed-premium"
+  domain: "api.workfx.ai"
+
+# Main application configuration
+workfx:
+  # Application image
+  image:
+    repository: "workfx-ai-prod"
+    tag: "latest"  # Will be replaced by CI/CD
+    pullPolicy: IfNotPresent
+  
+  # Deployment configuration
+  replicas: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  # Resource requirements (prod environment - production scale)
+  resources:
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+    requests:
+      cpu: "1000m"
+      memory: "1.5Gi"
+  
+  # Health checks
+  livenessProbe:
+    enabled: true
+    path: /health
+    port: 5001
+    initialDelaySeconds: 100
+    timeoutSeconds: 3
+    periodSeconds: 30
+    failureThreshold: 5
+  
+  readinessProbe:
+    enabled: true
+    path: /ready
+    port: 5001
+    initialDelaySeconds: 100
+    timeoutSeconds: 3
+    periodSeconds: 10
+    failureThreshold: 3
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 5001
+    targetPort: 5001
+    annotations: {}
+  
+  # Ingress configuration (prod environment - external access)
+  ingress:
+    enabled: true
+    className: "azure/application-gateway"
+    annotations:
+      kubernetes.io/ingress.class: azure/application-gateway
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      appgw.ingress.kubernetes.io/ssl-redirect: "true"
+    hosts:
+      - host: "api.workfx.ai"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: "workfx-ai-tls"
+        hosts:
+          - "api.workfx.ai"
+  
+  # Auto-scaling (prod environment - production scale)
+  autoscaling:
+    enabled: true
+    minReplicas: 10
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  # Pod configuration for Azure Prod
+  podAnnotations: {}
+  nodeSelector:
+    agentpool: servicepool
+  tolerations:
+    - key: "nodepool"
+      operator: "Equal"
+      value: "servicepool"
+      effect: "NoSchedule"
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - workfx-ai-prod
+          topologyKey: "kubernetes.io/hostname"
+
+# Disable self-hosted services - use external Azure services
+postgresql:
+  enabled: false
+
+redis:
+  enabled: false
+
+elasticsearch:
+  enabled: false
+
+# External Azure services configuration
+externalPostgres:
+  enabled: true
+  host: "your-azure-postgres-host"  # Replace with actual Azure Database host
+  port: 5432
+  database: "workfx_ai_prod"
+  username: "workfx_user"
+  password: "your-password"  # Will be managed via Azure Key Vault
+  sslMode: "require"
+  connectionPool:
+    maxOpenConns: 50
+    maxIdleConns: 10
+    connMaxLifetime: "1h"
+
+externalRedis:
+  enabled: true
+  host: "your-azure-redis-host"  # Replace with actual Azure Cache host
+  port: 6379
+  password: "your-password"  # Will be managed via Azure Key Vault
+  username: ""
+  database: 0
+  ssl: true
+
+externalStorage:
+  enabled: true
+  type: "azure"
+  azure:
+    accountName: "tpstorageprodeastus"
+    accountKey: "your-account-key"  # Will be managed via Azure Key Vault
+    containerName: "workfx-ai-prod"
+    endpoint: "https://tpstorageprodeastus.blob.core.windows.net"
+
+# Azure-specific configuration
+azure:
+  # Azure Key Vault configuration
+  keyVaultUrl: "https://tp-kv-prod-eastus.vault.azure.net/"
+  aksManagedIdentity: "202f7491-9e3f-4a10-828e-e575beed3fd3"
+  tenantId: "9d3faaef-f2f7-421c-9661-89d2ca10513d"
+  
+  # Azure Application Insights
+  applicationInsights:
+    enabled: true
+    connectionString: "InstrumentationKey=a40acb93-ae94-4604-9cd0-1690b97c61e4;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=11805892-77fc-4d2a-8b52-b2dce37e193e"
+  
+  # Azure Container Registry
+  acr:
+    name: "tpacrprodeastus.azurecr.io"
+    server: "tpacrprodeastus.azurecr.io"
+
+# Application configuration for prod environment
+config:
+  # Environment settings
+  env: "prod"
+  logLevel: "INFO"  # Production uses INFO level
+  enableOtel: true
+  otelServiceName: "workfx-ai-prod"
+  
+  # Production specific settings
+  isTest: false
+  isKaDeploy: false
+  
+  # Service endpoints (prod environment)
+  managementServiceEndpoint: "http://target-pilot-management-service-prod:5001"
+  aiServiceEndpoint: "http://target-pilot-ai-service-prod:5001"
+  ecommerceServiceEndpoint: "http://target-pilot-management-java-prod:5001"
+  
+  # External service endpoints
+  idbUrl: "http://workfx-ai-idb-prod.default.svc.cluster.local:8000/api"
+  fileUrl: "https://api.workfx.ai"
+  botLintPrefix: "https://bot.targetpilot.ai/"
+  adminLintPrefix: "https://admin.targetpilot.ai/"
+  
+  # Model configuration
+  embeddingModelProvider: "azure_openai"
+  embeddingModelName: "text-embedding-ada-002"
+  rerankModelProvider: "azure_ai_foundry"
+  rerankModelName: "Cohere-rerank-v3.5"
+  
+  # RAG configuration
+  rag:
+    summaryBoost: "2.0"
+    contentBoost: "1.0"
+    distilledKnowledgeBoost: "1.5"
+    keywordsBoost: "1.0"
+    defaultSearchLimit: "10"
+    maxSearchLimit: "100"
+    defaultVectorK: "10"
+    defaultNumCandidates: "100"
+    vectorSimilarityThreshold: "0.5"
+    rerankTopK: "20"
+    rerankScoreThreshold: "0.5"
+    searchTimeout: "30.0"
+    embeddingTimeout: "10.0"
+    enableCaching: "true"
+    cacheTtlSeconds: "300"
+  
+  # Rate limiting (prod environment - conservative and secure)
+  rateLimit:
+    enabled: true
+    redisKeyPrefix: "workfx:rate_limit"
+    redisKeyExpireBuffer: "10"
+    
+    # Feature switches
+    ipEnabled: false
+    tenantEnabled: true
+    agentMessageEnabled: true
+    
+    # Time windows
+    minuteWindow: "60"
+    hourWindow: "3600"
+    dayWindow: "86400"
+    weeklyWindow: "604800"
+    monthlyWindow: "2592000"
+    
+    # Calculation ratios
+    minuteLimitRatio: "0.05"
+    dailyLimitHours: "16"
+    ipTenantRatio: "0.1"
+    
+    # Global limits (production scale)
+    globalRequestsPerHour: "100000"
+    globalRequestsPerMinute: "10000"
+    globalRequestsPerDay: "2000000"
+    
+    # Tenant limits (production appropriate)
+    tenantCapacityMultiplier: "2000"
+    defaultTenantRequestsPerHour: "2000"
+    defaultTenantRequestsPerMinute: "100"
+    defaultTenantRequestsPerDay: "32000"
+    
+    # IP limits (stricter for production)
+    ipRequestsPerHour: "5000"
+    ipRequestsPerMinute: "200"
+    ipRequestsPerDay: "64000"
+    
+    # Agent invoke limits (production appropriate)
+    agentInvokeRequestsPerHour: "2000"
+    agentInvokeRequestsPerMinute: "100"
+    agentInvokeRequestsPerDay: "32000"
+    
+    # External API limits (conservative for security)
+    externalApiRequestsPerHour: "300"
+    externalApiRequestsPerMinute: "20"
+    externalApiRequestsPerDay: "4800"
+    
+    # KA tenant multiplier (3x for production)
+    kaTenantMultiplier: "10"
+  
+  # URL Extractor Configuration
+  urlExtractor:
+    sitemapMaxSize: "10485760"
+    sitemapTimeout: "15"
+    maxSitemapIndexSize: "100"
+    jinaBaseUrl: "https://r.jina.ai/"
+    jinaTimeout: "30"
+    enableSitemap: true
+    enableProvider: true
+    enableDuplicateRemoval: true
+  
+  # Payment gateway configuration
+  paymentGateway:
+    stripe:
+      checkoutSuccessUrl: "https://platform.workfx.ai/pricing?paymentStatus=succeed"
+      checkoutCancelUrl: "https://platform.workfx.ai/pricing?paymentStatus=canceled"
+      customerPortalReturnUrl: "https://platform.workfx.ai"
+  
+  # Admin configuration
+  adminTenants: '["0299f9f5-62f6-49d4-b51e-54ab62a24322"]'
+  adminTenantId: "0a9c95af-535d-4b88-982d-f2718d8ce9df"
+  adminTenantUnitId: "91e7825e-9b56-46f9-974e-18dd21b17843"
+  
+  # RDC specific settings
+  wfxRdcStepbToolFlowUrl: "http://workfx-ai-prod.default.svc.cluster.local:8000/api/v2/tools/212ae8d3-5f50-4ed3-a667-06da4a900a57/flows/draft/runs"
+
+# Monitoring and observability (prod environment - comprehensive)
+monitoring:
+  enabled: true
+  
+  # Prometheus integration
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: "30s"
+      scrapeTimeout: "10s"
+    prometheusRule:
+      enabled: true
+  
+  # Grafana dashboards
+  grafana:
+    enabled: true
+    dashboard:
+      enabled: true
+      label: "grafana_dashboard"
+      labelValue: "1"
+  
+  # Logging
+  logging:
+    enabled: true
+    level: "INFO"
+    fluentd:
+      enabled: true
+      elasticsearch:
+        host: "elasticsearch-master"
+        port: 9200
+        username: ""
+        password: ""
+
+# Security configuration (prod environment - comprehensive)
+security:
+  # Network policies
+  networkPolicy:
+    enabled: true
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                name: ingress-nginx
+        ports:
+          - protocol: TCP
+            port: 5001
+  
+  # RBAC
+  rbac:
+    enabled: true
+    create: true
+    rules: []
+  
+  # Secrets management
+  secrets:
+    enabled: true
+    existingSecret: ""
+    data: {}
+  
+  # External secrets operator (Azure Key Vault)
+  externalSecrets:
+    enabled: true
+    secretStore:
+      name: "azure-key-vault-store"
+      kind: "SecretStore"
+    refreshInterval: "15m"
+    data:
+      # Map external secrets to application environment variables
+      AZURE_CLIENT_ID: "{{ .AZURE_CLIENT_ID }}"
+      AZURE_CLIENT_SECRET: "{{ .AZURE_CLIENT_SECRET }}"
+      AZURE_TENANT_ID: "{{ .AZURE_TENANT_ID }}"
+      DATABASE_PASSWORD: "{{ .DATABASE_PASSWORD }}"
+      REDIS_PASSWORD: "{{ .REDIS_PASSWORD }}"
+      STORAGE_ACCOUNT_KEY: "{{ .STORAGE_ACCOUNT_KEY }}"
+
+# Backup configuration (prod environment - comprehensive)
+backup:
+  enabled: true
+  
+  # Database backup
+  database:
+    enabled: true
+    schedule: "0 2 * * *"  # Daily at 2 AM
+    retention: 30
+    storage:
+      type: "azure"
+      bucket: "workfx-backups-prod"
+      path: "database"
+  
+  # File backup
+  files:
+    enabled: true
+    schedule: "0 3 * * *"  # Daily at 3 AM
+    retention: 90
+    storage:
+      type: "azure"
+      bucket: "workfx-backups-prod"
+      path: "files"
+
+# Maintenance configuration
+maintenance:
+  # Rolling updates
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+  
+  # Pod disruption budget
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  
+  # Horizontal pod autoscaler
+  hpa:
+    enabled: true
+    minReplicas: 10
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Resource quotas (prod environment - production scale)
+resourceQuota:
+  enabled: true
+  hard:
+    requests.cpu: "20"
+    requests.memory: "40Gi"
+    limits.cpu: "40"
+    limits.memory: "80Gi"
+    persistentvolumeclaims: "50"
+
+# Node affinity and scheduling
+scheduling:
+  nodeSelector:
+    agentpool: servicepool
+  tolerations:
+    - key: "nodepool"
+      operator: "Equal"
+      value: "servicepool"
+      effect: "NoSchedule"
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - workfx-ai-prod
+          topologyKey: "kubernetes.io/hostname"
+
+# Database migration configuration
+databaseMigration:
+  enabled: true
+  
+  # Migration strategy
+  strategy: "startup"  # Run migrations when application starts
+  
+  # Migration options
+  options:
+    autoMigrate: true
+    createTables: true
+    updateSchema: true
+    backupBeforeMigration: true
+  
+  # Migration scripts location
+  scriptsPath: "/app/migrations"
+  
+  # Rollback configuration
+  rollback:
+    enabled: true
+    maxRollbackSteps: 5
+  
+  # Health checks after migration
+  healthCheck:
+    enabled: true
+    timeout: "5m"
+    retries: 3

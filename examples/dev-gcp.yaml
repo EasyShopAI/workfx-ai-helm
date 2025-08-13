@@ -1,0 +1,94 @@
+# GCP Development Environment Example
+# This file shows how to configure WorkFX-AI for GCP development
+
+# Override base values for GCP development
+global:
+  environment: "dev"
+  cloudProvider: "gcp"
+  imageRegistry: "gcr.io/your-project-id"
+  storageClass: "standard"
+  domain: "dev.workfx.ai"
+
+# GCP-specific image configuration
+image:
+  api:
+    repository: "gcr.io/your-project-id/workfx-ai-api"
+    tag: "latest"
+  cdc:
+    repository: "gcr.io/your-project-id/workfx-ai-cdc"
+    tag: "latest"
+  idb:
+    repository: "gcr.io/your-project-id/workfx-ai-idb"
+    tag: "latest"
+
+# Development resource limits
+workfx:
+  api:
+    replicas: 1
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+  
+  cdc:
+    replicas: 1
+    resources:
+      limits:
+        cpu: "250m"
+        memory: "256Mi"
+      requests:
+        cpu: "125m"
+        memory: "128Mi"
+  
+  idb:
+    replicas: 1
+    resources:
+      limits:
+        cpu: "250m"
+        memory: "256Mi"
+      requests:
+        cpu: "125m"
+        memory: "128Mi"
+
+# Enable development tools
+devTools:
+  enabled: true
+
+# Basic monitoring
+monitoring:
+  enabled: true
+
+# GCP storage configuration
+storage:
+  enabled: true
+  type: "gcp"
+  size: "500Mi"
+  gcp:
+    bucket: "workfx-ai-dev-storage"
+    projectId: "your-project-id"
+    serviceAccountKey: "gcs-service-account"
+
+# External database (Cloud SQL)
+postgresql:
+  enabled: false
+  external:
+    enabled: true
+    host: "your-instance-ip"
+    port: 5432
+    database: "workfx_ai_dev"
+    username: "workfx_user"
+    password: "your-password"
+    sslMode: "require"
+
+# External Redis (Cloud Memorystore)
+redis:
+  enabled: false
+  external:
+    enabled: true
+    host: "your-redis-ip"
+    port: 6379
+    password: "your-password"
+    ssl: false

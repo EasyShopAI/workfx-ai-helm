@@ -1,0 +1,48 @@
+# Helm
+charts/*/charts/
+charts/*/requirements.lock
+*.tgz
+packaged/
+
+# Dependencies
+charts/*/Chart.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+
+# Test artifacts
+test-results/
+coverage/
+
+# Build artifacts
+build/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+
+# Helm repository
+index.yaml

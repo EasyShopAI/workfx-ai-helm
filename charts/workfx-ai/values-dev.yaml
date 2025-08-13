@@ -1,0 +1,51 @@
+# Development Environment Override
+# This file extends the base values.yaml with development-specific settings
+
+# Override base values for development
+global:
+  environment: "dev"
+  cloudProvider: "gcp"
+
+# Development-specific resource limits
+workfx:
+  api:
+    replicas: 1
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+  
+  cdc:
+    replicas: 1
+    resources:
+      limits:
+        cpu: "250m"
+        memory: "256Mi"
+      requests:
+        cpu: "125m"
+        memory: "128Mi"
+  
+  idb:
+    replicas: 1
+    resources:
+      limits:
+        cpu: "250m"
+        memory: "256Mi"
+      requests:
+        cpu: "125m"
+        memory: "128Mi"
+
+# Enable development tools
+devTools:
+  enabled: true
+
+# Basic monitoring
+monitoring:
+  enabled: true
+
+# Smaller storage
+storage:
+  size: "500Mi"

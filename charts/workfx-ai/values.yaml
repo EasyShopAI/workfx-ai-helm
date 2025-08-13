@@ -1,0 +1,490 @@
+# Default values for workfx-ai.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global configuration
+global:
+  # Environment: dev, staging, prod
+  environment: "dev"
+  # Cloud provider: gcp, azure, aws, local
+  cloudProvider: "gcp"
+  # Image registry
+  imageRegistry: ""
+  # Storage class
+  storageClass: ""
+  # Domain for ingress
+  domain: ""
+
+# Image configuration
+image:
+  api:
+    repository: "workfx-ai-api"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  
+  cdc:
+    repository: "workfx-ai-cdc"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  
+  idb:
+    repository: "workfx-ai-idb"
+    tag: "latest"
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+
+# Main application configuration
+workfx:
+  # API service
+  api:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+    
+    # Health checks
+    livenessProbe:
+      enabled: true
+      path: /health
+      port: 5001
+      initialDelaySeconds: 30
+      timeoutSeconds: 5
+      periodSeconds: 30
+      failureThreshold: 3
+    
+    readinessProbe:
+      enabled: true
+      path: /ready
+      port: 5001
+      initialDelaySeconds: 10
+      timeoutSeconds: 3
+      periodSeconds: 10
+      failureThreshold: 3
+    
+    # Service configuration
+    service:
+      type: ClusterIP
+      port: 5001
+      targetPort: 5001
+    
+    # Ingress configuration
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts: []
+      tls: []
+    
+    # Auto-scaling
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 80
+      targetMemoryUtilizationPercentage: 80
+    
+    # Pod configuration
+    nodeSelector: {}
+    affinity: {}
+    tolerations: []
+    priorityClassName: ""
+  
+  # CDC service
+  cdc:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+    
+    # Health checks
+    livenessProbe:
+      enabled: true
+      path: /health
+      port: 5002
+      initialDelaySeconds: 30
+      timeoutSeconds: 5
+      periodSeconds: 30
+      failureThreshold: 3
+    
+    readinessProbe:
+      enabled: true
+      path: /ready
+      port: 5002
+      initialDelaySeconds: 10
+      timeoutSeconds: 3
+      periodSeconds: 10
+      failureThreshold: 3
+    
+    # Service configuration
+    service:
+      type: ClusterIP
+      port: 5002
+      targetPort: 5002
+    
+    # Pod configuration
+    nodeSelector: {}
+    affinity: {}
+    tolerations: []
+    priorityClassName: ""
+  
+  # IDB service
+  idb:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+    
+    # Health checks
+    livenessProbe:
+      enabled: true
+      path: /health
+      port: 5003
+      initialDelaySeconds: 30
+      timeoutSeconds: 5
+      periodSeconds: 30
+      failureThreshold: 3
+    
+    readinessProbe:
+      enabled: true
+      path: /ready
+      port: 5003
+      initialDelaySeconds: 10
+      timeoutSeconds: 3
+      periodSeconds: 10
+      failureThreshold: 3
+    
+    # Service configuration
+    service:
+      type: ClusterIP
+      port: 5003
+      targetPort: 5003
+    
+    # Pod configuration
+    nodeSelector: {}
+    affinity: {}
+    tolerations: []
+    priorityClassName: ""
+
+# Database configuration
+postgresql:
+  enabled: false
+  # External database configuration
+  external:
+    enabled: false
+    host: ""
+    port: 5432
+    database: ""
+    username: ""
+    password: ""
+    sslMode: "require"
+
+# Redis configuration
+redis:
+  enabled: false
+  # External Redis configuration
+  external:
+    enabled: false
+    host: ""
+    port: 6379
+    password: ""
+    username: ""
+    database: 0
+    ssl: false
+
+# Storage configuration
+storage:
+  enabled: false
+  type: "local"  # local, gcp, azure, aws
+  size: "1Gi"
+  
+  # Cloud storage configuration
+  gcp:
+    bucket: ""
+    projectId: ""
+    serviceAccountKey: ""
+  
+  azure:
+    accountName: ""
+    accountKey: ""
+    containerName: ""
+    endpoint: ""
+  
+  aws:
+    bucket: ""
+    region: ""
+    accessKey: ""
+    secretKey: ""
+
+# Monitoring configuration
+monitoring:
+  enabled: false
+  
+  # Prometheus
+  prometheus:
+    enabled: false
+    serviceMonitor:
+      enabled: false
+      interval: "30s"
+      scrapeTimeout: "10s"
+  
+  # Grafana
+  grafana:
+    enabled: false
+    dashboards:
+      enabled: false
+  
+  # Logging
+  logging:
+    enabled: false
+    level: "INFO"
+
+# Development tools
+devTools:
+  enabled: false
+  
+  # AKHQ for Kafka management
+  akhq:
+    enabled: false
+    resources:
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+  
+  # Kibana for log analysis
+  kibana:
+    enabled: false
+    resources:
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+
+# Security configuration
+security:
+  # Network policies
+  networkPolicy:
+    enabled: false
+  
+  # RBAC
+  rbac:
+    enabled: true
+    create: true
+    rules: []
+  
+  # Secrets management
+  secrets:
+    enabled: false
+    existingSecret: ""
+    data: {}
+  
+  # External secrets operator
+  externalSecrets:
+    enabled: false
+    secretStore:
+      name: ""
+      kind: "SecretStore"
+    refreshInterval: "15m"
+    data: {}
+
+# Backup configuration
+backup:
+  enabled: false
+  schedule: "0 2 * * *"
+  retention: "7d"
+
+# Maintenance configuration
+maintenance:
+  # Rolling updates
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+  
+  # Pod disruption budget
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+
+# Resource quotas
+resourceQuota:
+  enabled: false
+  limits:
+    cpu: "4"
+    memory: "8Gi"
+    persistentvolumeclaims: "10"
+
+# Node affinity and scheduling
+scheduling:
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Configuration for different environments
+# These values can be overridden by environment-specific values files
+env:
+  # Development environment
+  dev:
+    workfx:
+      api:
+        replicas: 1
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+      cdc:
+        replicas: 1
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "125m"
+            memory: "128Mi"
+      idb:
+        replicas: 1
+        resources:
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+          requests:
+            cpu: "125m"
+            memory: "128Mi"
+    
+    devTools:
+      enabled: true
+    
+    monitoring:
+      enabled: true
+    
+    storage:
+      size: "500Mi"
+  
+  # Staging environment
+  staging:
+    workfx:
+      api:
+        replicas: 2
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+      cdc:
+        replicas: 2
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+      idb:
+        replicas: 2
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+    
+    autoscaling:
+      enabled: true
+    
+    storage:
+      size: "2Gi"
+  
+  # Production environment
+  prod:
+    workfx:
+      api:
+        replicas: 3
+        resources:
+          limits:
+            cpu: "2000m"
+            memory: "2Gi"
+          requests:
+            cpu: "1000m"
+            memory: "1Gi"
+      cdc:
+        replicas: 3
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+      idb:
+        replicas: 3
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+    
+    autoscaling:
+      enabled: true
+    
+    monitoring:
+      enabled: true
+    
+    security:
+      networkPolicy:
+        enabled: true
+    
+    backup:
+      enabled: true
+    
+    storage:
+      size: "10Gi"
+
+# Cloud provider specific configurations
+cloudProviders:
+  gcp:
+    storageClass: "standard"
+    domain: "gcp.workfx.ai"
+    imageRegistry: "gcr.io"
+  
+  azure:
+    storageClass: "managed-premium"
+    domain: "azure.workfx.ai"
+    imageRegistry: "azurecr.io"
+  
+  aws:
+    storageClass: "gp2"
+    domain: "aws.workfx.ai"
+    imageRegistry: "public.ecr.aws"
+  
+  local:
+    storageClass: "local-path"
+    domain: "local.workfx.ai"
+    imageRegistry: ""

@@ -1,0 +1,24 @@
+# Chart testing configuration for WorkFX-AI
+chart-dirs:
+  - charts
+
+chart-repos:
+  - bitnami=https://charts.bitnami.com/bitnami
+
+# Chart testing options
+check-version-increment: false
+validate-maintainers: false
+validate-chart-schema: true
+validate-yaml: true
+
+# Linting options
+lint-conf: .helm/lintconf.yaml
+
+# Testing options
+upgrade: true
+install: true
+cleanup-on-fail: true
+timeout: 10m
+
+# Helm options
+helm-extra-args: --timeout 10m --wait

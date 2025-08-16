@@ -1,65 +1,98 @@
-# Development environment configuration for WorkFX AI Platform
-# This file contains development-specific overrides
+# Production environment configuration for WorkFX AI Platform
+# This file contains production-specific overrides with security and performance best practices
 
 # Global configuration
 global:
-  environment: "dev"
-  cloudProvider: "gcp"
-  imageRegistry: "docker.io"
-  domain: "workfx-ai-dev.local"
-  storageClass: ""
+  environment: "prod"
+  cloudProvider: "azure"  # Change to your cloud provider
+  imageRegistry: "your-registry.azurecr.io"  # Change to your registry
+  domain: "workfx-ai.yourdomain.com"  # Change to your domain
+  storageClass: "managed-premium"  # Change to your storage class
 
 # WorkFX AI Platform configuration
 workfx:
   # API Service configuration
   api:
     enabled: true
-    replicas: 1
+    replicas: 3  # Production: multiple replicas for high availability
     
     # Image configuration
     image:
       repository: "workfx/workfx-ai-api"
-      tag: "dev"
-      pullPolicy: "Always"
+      tag: "latest"  # Use specific version tag in production
+      pullPolicy: "IfNotPresent"
     
-    # Resources (reduced for development)
+    # Resources (production: higher resources)
     resources:
       limits:
-        cpu: "1000m"
-        memory: "2Gi"
+        cpu: "4000m"
+        memory: "8Gi"
       requests:
-        cpu: "500m"
-        memory: "1Gi"
+        cpu: "2000m"
+        memory: "4Gi"
+    
+    # Production: enable auto-scaling
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    
+    # Production: enable pod disruption budget
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 2
+    
+    # Production: enable network policies
+    networkPolicy:
+      enabled: true
+      ingress: []
+      egress: []
+    
+    # Production: enable pod security standards
+    podSecurityStandards:
+      enabled: true
+      level: "restricted"
+      version: "v1.24"
   
   # CDC Service configuration
   cdc:
     enabled: true
-    replicas: 1
+    replicas: 2  # Production: multiple replicas for reliability
     
     # Image configuration
     image:
       repository: "workfx/workfx-ai-cdc"
-      tag: "dev"
-      pullPolicy: "Always"
+      tag: "latest"  # Use specific version tag in production
+      pullPolicy: "IfNotPresent"
     
-    # Resources (reduced for development)
+    # Resources (production: higher resources)
     resources:
       limits:
-        cpu: "500m"
-        memory: "1Gi"
+        cpu: "2000m"
+        memory: "4Gi"
       requests:
-        cpu: "250m"
-        memory: "512Mi"
+        cpu: "1000m"
+        memory: "2Gi"
+    
+    # Production: enable auto-scaling
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
   
   # Storage Configuration
   storage:
-    type: "gcs"
-    bucketUriPath: "gs://workfx-ai-storage-dev"
-    adminBucketName: "workfx-ai-admin-dev"
-    userBucketName: "workfx-ai-user-dev"
-    publicBucketName: "workfx-ai-public-dev"
-    emailBucketName: "workfx-ai-email-dev"
-    toolsImageBucketName: "workfx-ai-tools-image-dev"
+    type: "azure"  # Change to your storage type
+    bucketUriPath: "https://yourstorageaccount.blob.core.windows.net"
+    adminBucketName: "workfx-ai-admin-prod"
+    userBucketName: "workfx-ai-user-prod"
+    publicBucketName: "workfx-ai-public-prod"
+    emailBucketName: "workfx-ai-email-prod"
+    toolsImageBucketName: "workfx-ai-tools-image-prod"
     uploadFileSizeLimit: 15
     uploadImageFileSizeLimit: 15
     uploadVideoFileSizeLimit: 100
@@ -68,15 +101,15 @@ workfx:
   
   # Billing Configuration
   billing:
-    enabled: false
+    enabled: true
   
   # Agent Evaluation Configuration
   agentEvaluation:
-    enabled: false
+    enabled: true
   
   # Integrations Configuration
   integrations:
-    jinaApiKey: ""
+    jinaApiKey: ""  # Set your Jina API key
 
 # Infrastructure services configuration
 infrastructure:
@@ -88,15 +121,22 @@ infrastructure:
     global:
       postgresql:
         auth:
-          postgresPassword: "dev-password"
+          postgresPassword: ""  # Set via --set or external secret
           username: "workfx"
-          password: "dev-password"
+          password: ""  # Set via --set or external secret
           database: "workfx_ai"
         primary:
           persistence:
             enabled: true
-            size: "10Gi"
-            storageClass: ""
+            size: "100Gi"  # Production: larger storage
+            storageClass: "managed-premium"
+        readReplicas:
+          enabled: true  # Production: enable read replicas
+          replicaCount: 2
+          persistence:
+            enabled: true
+            size: "100Gi"
+            storageClass: "managed-premium"
   
   # Redis configuration
   redis:
@@ -105,12 +145,19 @@ infrastructure:
     # Bitnami Redis chart configuration
     auth:
       enabled: true
-      password: "dev-password"
+      password: ""  # Set via --set or external secret
     master:
       persistence:
         enabled: true
-        size: "5Gi"
-        storageClass: ""
+        size: "50Gi"  # Production: larger storage
+        storageClass: "managed-premium"
+    replica:
+      enabled: true  # Production: enable replicas
+      replicaCount: 2
+      persistence:
+        enabled: true
+        size: "50Gi"
+        storageClass: "managed-premium"
   
   # Kafka configuration
   kafka:
@@ -118,20 +165,20 @@ infrastructure:
     
     # Bitnami Kafka chart configuration
     auth:
-      clientProtocol: plaintext
+      clientProtocol: plaintext  # Change to SASL_SSL for production security
       interBrokerProtocol: plaintext
       tls:
-        enabled: false
+        enabled: false  # Enable for production security
     zookeeper:
       enabled: true
       persistence:
         enabled: true
-        size: "4Gi"
-        storageClass: ""
+        size: "20Gi"
+        storageClass: "managed-premium"
     persistence:
       enabled: true
-      size: "5Gi"
-      storageClass: ""
+      size: "50Gi"  # Production: larger storage
+      storageClass: "managed-premium"
     
     # Kafka topics and consumer configuration
     topics:
@@ -145,23 +192,23 @@ infrastructure:
     
     # Bitnami Elasticsearch chart configuration
     master:
-      replicas: 1
+      replicas: 3  # Production: multiple master nodes
       persistence:
         enabled: true
-        size: "4Gi"
-        storageClass: ""
+        size: "20Gi"
+        storageClass: "managed-premium"
     data:
-      replicas: 1
+      replicas: 3  # Production: multiple data nodes
       persistence:
         enabled: true
-        size: "4Gi"
-        storageClass: ""
+        size: "100Gi"  # Production: larger storage
+        storageClass: "managed-premium"
     kibana:
       enabled: true
       persistence:
         enabled: true
-        size: "1Gi"
-        storageClass: ""
+        size: "5Gi"
+        storageClass: "managed-premium"
   
   # AKHQ (Kafka Management UI) configuration
   akhq:
@@ -178,28 +225,28 @@ infrastructure:
 # Application configuration
 config:
   # Core application settings
-  environment: "dev"
-  cloudProvider: "gcp"
+  environment: "prod"
+  cloudProvider: "azure"  # Change to your cloud provider
   kaName: "wfx"
   enableOtel: true
-  logLevel: "DEBUG"
+  logLevel: "INFO"  # Production: use INFO level
   
   # Model configuration
   models:
     embedding:
-      provider: "google_ai"
-      name: "text-embedding-004"
-      apiKey: ""
+      provider: "azure_openai"  # Change to your provider
+      name: "text-embedding-ada-002"
+      apiKey: ""  # Set via external secret
       baseUrl: ""
     rerank:
-      provider: "google_ai"
-      name: "text-bison-001"
-      apiKey: ""
+      provider: "azure_openai"  # Change to your provider
+      name: "text-embedding-ada-002"
+      apiKey: ""  # Set via external secret
       baseUrl: ""
     llm:
-      provider: "google_ai"
-      name: "gemini-pro"
-      apiKey: ""
+      provider: "azure_openai"  # Change to your provider
+      name: "gpt-4"
+      apiKey: ""  # Set via external secret
       baseUrl: ""
   
   # RAG configuration
@@ -220,14 +267,14 @@ config:
     enableCaching: "true"
     cacheTtlSeconds: "300"
   
-  # Rate limiting configuration (more permissive for development)
+  # Rate limiting configuration (production: more restrictive)
   rateLimit:
     enabled: true
     redisKeyPrefix: "workfx:rate_limit"
     redisKeyExpireBuffer: "10"
     
     # Feature switches
-    ipEnabled: false
+    ipEnabled: true  # Production: enable IP-based rate limiting
     tenantEnabled: true
     agentMessageEnabled: true
     
@@ -243,35 +290,35 @@ config:
     dailyLimitHours: "16"
     ipTenantRatio: "0.1"
     
-    # Global limits (generous for development)
-    globalRequestsPerHour: "100000"
-    globalRequestsPerMinute: "10000"
-    globalRequestsPerDay: "2000000"
+    # Global limits (production: reasonable limits)
+    globalRequestsPerHour: "50000"
+    globalRequestsPerMinute: "5000"
+    globalRequestsPerDay: "1000000"
     
-    # Tenant limits (higher for development testing)
-    tenantCapacityMultiplier: "2000"
-    defaultTenantRequestsPerHour: "2000"
-    defaultTenantRequestsPerMinute: "100"
-    defaultTenantRequestsPerDay: "32000"
+    # Tenant limits (production: reasonable limits)
+    tenantCapacityMultiplier: "1000"
+    defaultTenantRequestsPerHour: "1000"
+    defaultTenantRequestsPerMinute: "50"
+    defaultTenantRequestsPerDay: "16000"
     
-    # IP limits (generous for development)
-    ipRequestsPerHour: "5000"
-    ipRequestsPerMinute: "200"
-    ipRequestsPerDay: "64000"
+    # IP limits (production: reasonable limits)
+    ipRequestsPerHour: "2000"
+    ipRequestsPerMinute: "100"
+    ipRequestsPerDay: "32000"
     
     # Agent invoke limits
-    agentInvokeRequestsPerHour: "2000"
-    agentInvokeRequestsPerMinute: "100"
-    agentInvokeRequestsPerDay: "32000"
+    agentInvokeRequestsPerHour: "1000"
+    agentInvokeRequestsPerMinute: "50"
+    agentInvokeRequestsPerDay: "16000"
     
     # External API limits
-    externalApiRequestsPerHour: "300"
-    externalApiRequestsPerMinute: "20"
-    externalApiRequestsPerDay: "4800"
+    externalApiRequestsPerHour: "150"
+    externalApiRequestsPerMinute: "10"
+    externalApiRequestsPerDay: "2400"
     
-    # KA tenant benefits (10x for development testing)
-    kaTenantMultiplier: "10"
-    kaTenantBypassRateLimit: true
+    # KA tenant benefits
+    kaTenantMultiplier: "5"
+    kaTenantBypassRateLimit: false  # Production: don't bypass rate limiting
   
   # URL Extractor configuration
   urlExtractor:
@@ -330,18 +377,18 @@ secrets:
   # JWT Configuration (jwt-secret)
   jwt:
     secret_id: "jwt-secret"
-    admin_jwt_key: "dev-jwt-key"
-    admin_jwt_issuer: "https://dev.workfx.ai"
-    admin_jwt_audience: "https://dev.workfx.ai"
-    ai_jwt_key: "dev-ai-jwt-key"
-    ai_jwt_issuer: "https://dev.workfx.ai"
-    ai_jwt_audience: "https://dev.workfx.ai"
+    admin_jwt_key: ""  # Set via external secret
+    admin_jwt_issuer: "https://workfx.ai"
+    admin_jwt_audience: "https://workfx.ai"
+    ai_jwt_key: ""  # Set via external secret
+    ai_jwt_issuer: "https://workfx.ai"
+    ai_jwt_audience: "https://workfx.ai"
   
   # Security Configuration (secret-key)
   security:
     secret_id: "secret-key"
-    data_secret: "dev-data-secret"
-    jina_api_key: ""
+    data_secret: ""  # Set via external secret
+    jina_api_key: ""  # Set via external secret
   
   # Model Hosting Configuration (wfx-hosted-models)
   model_hosting:
@@ -355,26 +402,22 @@ secrets:
   payment_gateway:
     secret_id: "wfx-payment-gateway-secret"
     stripe:
-      api_key: ""
-      webhook_secret: ""
-      publishable_key: ""
+      api_key: ""  # Set via external secret
+      webhook_secret: ""  # Set via external secret
+      publishable_key: ""  # Set via external secret
   
   # Agent Evaluation Configuration (wfx-agent-evaluation-secret)
   agent_evaluation:
     secret_id: "wfx-agent-evaluation-secret"
-    endpoint: ""
-    api_key: ""
+    endpoint: ""  # Set your agent evaluation endpoint
+    api_key: ""  # Set via external secret
   
   # Azure Storage Connection (azure-storage-connection-string)
   azure_storage:
     secret_id: "azure-storage-connection-string"
-    azure_connection_string: ""
+    azure_connection_string: ""  # Set via external secret
   
   # Internal API Keys (internal-service-key)
   internal_api_keys:
     secret_id: "internal-service-key"
-    internal_api_keys: "[]"
-  
-
-
-
+    internal_api_keys: "[]"  # Set via external secret

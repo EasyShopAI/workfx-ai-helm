@@ -1,41 +1,80 @@
-# Default values for WorkFX AI
-# This is a YAML-formatted file that contains all the configurable parameters for the WorkFX AI chart.
+# WorkFX AI Platform Helm Chart Values
+# This file contains all configuration options for the WorkFX AI platform
 
 # Global configuration
 global:
-  # Environment: dev, staging, prod
-  environment: "dev"
-  # Cloud provider: gcp, azure, aws, local
-  cloudProvider: "gcp"
-  # Image registry (default to our public GCR)
-  imageRegistry: "us-central1-docker.pkg.dev/workfxai-dev/workfx-ai-gar-dev"
-  # Storage class for persistent volumes
-  storageClass: ""
-  # Domain for ingress (KA should set this)
-  domain: ""
-  # Image pull secrets (KA should provide if using private registry)
+  environment: "dev"           # dev, staging, prod
+  cloudProvider: "gcp"         # gcp, azure, aws, local
+  imageRegistry: "docker.io"
+  domain: "workfx-ai.local"
   imagePullSecrets: []
-
-# Image configuration
-image:
-  # Main WorkFX AI API service
-  api:
-    repository: "workfx-ai-dev"
-    tag: "latest"
-    pullPolicy: IfNotPresent
+  storageClass: ""
   
-  # Data Sync service
-  dataSync:
-    repository: "workfx-ai-data-sync-dev"
-    tag: "latest"
-    pullPolicy: IfNotPresent
+  # Application metadata
+  appName: "workfx-ai"
+  logLevel: "INFO"
+  
+  # Cloud-specific configurations
+  azure:
+    keyVaultUrl: ""
+    clientId: ""
+    clientSecret: ""
+    tenantId: ""
+  
+  aws:
+    region: "us-east-1"
+    accessKeyId: ""
+    secretAccessKey: ""
+  
+  gcp:
+    projectId: ""
+    region: "us-central1"
 
-# Main application configuration
+# ConfigMap configuration
+configmap:
+  create: true
+
+# Auto-scaling configuration
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# WorkFX AI Platform configuration
 workfx:
-  # API service
+  # API Service configuration
   api:
     enabled: true
     replicas: 2
+    
+    # Image configuration
+    image:
+      repository: "workfx/workfx-ai-api"
+      tag: "latest"
+      pullPolicy: "IfNotPresent"
+    
+    # Service configuration
+    service:
+      type: "ClusterIP"
+      port: 8000
+      targetPort: 8000
+      endpoint: "http://{{ include \"workfx-ai.fullname\" . }}:8000"
+    
+    # Ingress configuration
+    ingress:
+      enabled: false
+      className: "nginx"
+      annotations: {}
+      hosts:
+        - host: "workfx-ai.local"
+          paths:
+            - path: "/"
+              pathType: "Prefix"
+      tls: []
+    
+    # Resources
     resources:
       limits:
         cpu: "2000m"
@@ -47,64 +86,140 @@ workfx:
     # Health checks
     livenessProbe:
       enabled: true
-      path: /health
-      port: 5001
+      path: "/health"
+      port: 8000
       initialDelaySeconds: 30
+      periodSeconds: 10
       timeoutSeconds: 5
-      periodSeconds: 30
       failureThreshold: 3
     
     readinessProbe:
       enabled: true
-      path: /ready
-      port: 5001
-      initialDelaySeconds: 10
+      path: "/ready"
+      port: 8000
+      initialDelaySeconds: 5
+      periodSeconds: 5
       timeoutSeconds: 3
-      periodSeconds: 10
       failureThreshold: 3
     
-    # Service configuration
-    service:
-      type: ClusterIP
-      port: 5001
-      targetPort: 5001
-    
-    # Ingress configuration
-    ingress:
+    startupProbe:
       enabled: true
-      className: "nginx"
-      annotations:
-        kubernetes.io/ingress.class: nginx
-        nginx.ingress.kubernetes.io/ssl-redirect: "true"
-        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-      hosts:
-        - host: workfx-ai.local  # KA should override this
-          paths:
-            - path: /
-              pathType: Prefix
-      tls:
-        - secretName: workfx-ai-tls
-          hosts:
-            - workfx-ai.local  # KA should override this
+      path: "/health"
+      port: 8000
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 30
     
     # Auto-scaling
     autoscaling:
-      enabled: true
+      enabled: false
       minReplicas: 2
       maxReplicas: 10
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     
     # Pod configuration
+    podAnnotations: {}
+    podLabels: {}
     nodeSelector: {}
-    affinity: {}
     tolerations: []
+    affinity: {}
     priorityClassName: ""
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Container security context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Environment variables
+    env: {}
+    
+    # Volume mounts
+    volumeMounts: []
+    volumes: []
+    
+    # Command and args
+    command: []
+    args: []
+    
+    # Lifecycle hooks
+    lifecycle: {}
+    
+    # Init containers
+    initContainers: []
+    
+    # Sidecar containers
+    sidecarContainers: []
+    
+    # Additional secrets to load
+    additionalSecrets: []
+    
+    # Image pull secrets
+    imagePullSecrets: []
+    
+    # Pod disruption budget
+    podDisruptionBudget:
+      enabled: false
+      minAvailable: 1
+    
+    # Network policies
+    networkPolicy:
+      enabled: false
+      ingress: []
+      egress: []
+    
+    # Service account
+    serviceAccount:
+      create: true
+      name: ""
+      annotations: {}
+    
+    # RBAC
+    rbac:
+      enabled: true
+      rules: []
+    
+    # Pod security standards
+    podSecurityStandards:
+      enabled: false
+      level: "restricted"
+      version: "v1.24"
   
-  # Data Sync service
-  dataSync:
+  # CDC Service configuration
+  cdc:
     enabled: true
     replicas: 1
+    
+    # Image configuration
+    image:
+      repository: "workfx/workfx-ai-cdc"
+      tag: "latest"
+      pullPolicy: "IfNotPresent"
+    
+    # Service configuration
+    service:
+      type: "ClusterIP"
+      port: 8001
+      targetPort: 8001
+      endpoint: "http://{{ include \"workfx-ai.fullname\" . }}-cdc:8001"
+    
+    # Resources
     resources:
       limits:
         cpu: "1000m"
@@ -116,27 +231,300 @@ workfx:
     # Health checks
     livenessProbe:
       enabled: true
-      path: /health
-      port: 5002
+      path: "/health"
+      port: 8001
       initialDelaySeconds: 30
+      periodSeconds: 10
       timeoutSeconds: 5
-      periodSeconds: 30
       failureThreshold: 3
     
     readinessProbe:
       enabled: true
-      path: /ready
-      port: 5002
-      initialDelaySeconds: 10
+      path: "/ready"
+      port: 8001
+      initialDelaySeconds: 5
+      periodSeconds: 5
       timeoutSeconds: 3
-      periodSeconds: 10
       failureThreshold: 3
+    
+    startupProbe:
+      enabled: true
+      path: "/health"
+      port: 8001
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 30
+    
+    # Auto-scaling
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    
+    # Pod configuration
+    podAnnotations: {}
+    podLabels: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    priorityClassName: ""
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Container security context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Environment variables
+    env: {}
+    
+    # Volume mounts
+    volumeMounts: []
+    volumes: []
+    
+    # Command and args
+    command: []
+    args: []
+    
+    # Lifecycle hooks
+    lifecycle: {}
+    
+    # Init containers
+    initContainers: []
+    
+    # Sidecar containers
+    sidecarContainers: []
+    
+    # Additional secrets to load
+    additionalSecrets: []
+    
+    # Image pull secrets
+    imagePullSecrets: []
+    
+    # Pod disruption budget
+    podDisruptionBudget:
+      enabled: false
+      minAvailable: 1
+    
+    # Network policies
+    networkPolicy:
+      enabled: false
+      ingress: []
+      egress: []
+    
+    # Service account
+    serviceAccount:
+      create: true
+      name: ""
+      annotations: {}
+    
+    # RBAC
+    rbac:
+      enabled: true
+      rules: []
+    
+    # Pod security standards
+    podSecurityStandards:
+      enabled: false
+      level: "restricted"
+      version: "v1.24"
+  
+  # Worker Service configuration (for background job processing)
+  worker:
+    enabled: false
+    replicas: 2
+    
+    # Image configuration
+    image:
+      repository: "workfx/workfx-ai-worker"
+      tag: "latest"
+      pullPolicy: "IfNotPresent"
     
     # Service configuration
     service:
-      type: ClusterIP
-      port: 5002
-      targetPort: 5002
+      type: "ClusterIP"
+      port: 8002
+      targetPort: 8002
+    
+    # Resources
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "2Gi"
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+    
+    # Health checks
+    livenessProbe:
+      enabled: true
+      path: "/health"
+      port: 8002
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    
+    readinessProbe:
+      enabled: true
+      path: "/ready"
+      port: 8002
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    
+    # Auto-scaling
+    autoscaling:
+      enabled: false
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    
+    # Pod configuration
+    podAnnotations: {}
+    podLabels: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    priorityClassName: ""
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Container security context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Environment variables
+    env: {}
+    
+    # Volume mounts
+    volumeMounts: []
+    volumes: []
+    
+    # Command and args
+    command: []
+    args: []
+    
+    # Lifecycle hooks
+    lifecycle: {}
+    
+    # Init containers
+    initContainers: []
+    
+    # Sidecar containers
+    sidecarContainers: []
+    
+    # Additional secrets to load
+    additionalSecrets: []
+    
+    # Image pull secrets
+    imagePullSecrets: []
+    
+    # Pod disruption budget
+    podDisruptionBudget:
+      enabled: false
+      minAvailable: 1
+    
+    # Network policies
+    networkPolicy:
+      enabled: false
+      ingress: []
+      egress: []
+    
+    # Service account
+    serviceAccount:
+      create: true
+      name: ""
+      annotations: {}
+    
+    # RBAC
+    rbac:
+      enabled: true
+      rules: []
+    
+    # Pod security standards
+    podSecurityStandards:
+      enabled: false
+      level: "restricted"
+      version: "v1.24"
+  
+  # Scheduler Service configuration (for task scheduling)
+  scheduler:
+    enabled: false
+    replicas: 1
+    
+    # Image configuration
+    image:
+      repository: "workfx/workfx-ai-scheduler"
+      tag: "latest"
+      pullPolicy: "IfNotPresent"
+    
+    # Service configuration
+    service:
+      type: "ClusterIP"
+      port: 8003
+      targetPort: 8003
+    
+    # Resources
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+    
+    # Health checks
+    livenessProbe:
+      enabled: true
+      path: "/health"
+      port: 8003
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    
+    readinessProbe:
+      enabled: true
+      path: "/ready"
+      port: 8003
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
     
     # Auto-scaling
     autoscaling:
@@ -145,26 +533,722 @@ workfx:
       maxReplicas: 3
       targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
+    
+    # Pod configuration
+    podAnnotations: {}
+    podLabels: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    priorityClassName: ""
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Container security context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Environment variables
+    env: {}
+    
+    # Volume mounts
+    volumeMounts: []
+    volumes: []
+    
+    # Command and args
+    command: []
+    args: []
+    
+    # Lifecycle hooks
+    lifecycle: {}
+    
+    # Init containers
+    initContainers: []
+    
+    # Sidecar containers
+    sidecarContainers: []
+    
+    # Additional secrets to load
+    additionalSecrets: []
+    
+    # Image pull secrets
+    imagePullSecrets: []
+    
+    # Pod disruption budget
+    podDisruptionBudget:
+      enabled: false
+      minAvailable: 1
+    
+    # Network policies
+    networkPolicy:
+      enabled: false
+      ingress: []
+      egress: []
+    
+    # Service account
+    serviceAccount:
+      create: true
+      name: ""
+      annotations: {}
+    
+    # RBAC
+    rbac:
+      enabled: true
+      rules: []
+    
+    # Pod security standards
+    podSecurityStandards:
+      enabled: false
+      level: "restricted"
+      version: "v1.24"
+  
+  # Notifier Service configuration (for notifications)
+  notifier:
+    enabled: false
+    replicas: 1
+    
+    # Image configuration
+    image:
+      repository: "workfx/workfx-ai-notifier"
+      tag: "latest"
+      pullPolicy: "IfNotPresent"
+    
+    # Service configuration
+    service:
+      type: "ClusterIP"
+      port: 8004
+      targetPort: 8004
+    
+    # Resources
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+    
+    # Health checks
+    livenessProbe:
+      enabled: true
+      path: "/health"
+      port: 8004
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    
+    readinessProbe:
+      enabled: true
+      path: "/ready"
+      port: 8004
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    
+    # Auto-scaling
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    
+    # Pod configuration
+    podAnnotations: {}
+    podLabels: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    priorityClassName: ""
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Container security context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Environment variables
+    env: {}
+    
+    # Volume mounts
+    volumeMounts: []
+    volumes: []
+    
+    # Command and args
+    command: []
+    args: []
+    
+    # Lifecycle hooks
+    lifecycle: {}
+    
+    # Init containers
+    initContainers: []
+    
+    # Sidecar containers
+    sidecarContainers: []
+    
+    # Additional secrets to load
+    additionalSecrets: []
+    
+    # Image pull secrets
+    imagePullSecrets: []
+    
+    # Pod disruption budget
+    podDisruptionBudget:
+      enabled: false
+      minAvailable: 1
+    
+    # Network policies
+    networkPolicy:
+      enabled: false
+      ingress: []
+      egress: []
+    
+    # Service account
+    serviceAccount:
+      create: true
+      name: ""
+      annotations: {}
+    
+    # RBAC
+    rbac:
+      enabled: true
+      rules: []
+    
+    # Pod security standards
+    podSecurityStandards:
+      enabled: false
+      level: "restricted"
+      version: "v1.24"
+  
+  # Analytics Service configuration (for data analytics)
+  analytics:
+    enabled: false
+    replicas: 1
+    
+    # Image configuration
+    image:
+      repository: "workfx/workfx-ai-analytics"
+      tag: "latest"
+      pullPolicy: "IfNotPresent"
+    
+    # Service configuration
+    service:
+      type: "ClusterIP"
+      port: 8005
+      targetPort: 8005
+    
+    # Resources
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "2Gi"
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+    
+    # Health checks
+    livenessProbe:
+      enabled: true
+      path: "/health"
+      port: 8005
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    
+    readinessProbe:
+      enabled: true
+      path: "/ready"
+      port: 8005
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    
+    # Auto-scaling
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    
+    # Pod configuration
+    podAnnotations: {}
+    podLabels: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    priorityClassName: ""
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Container security context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Environment variables
+    env: {}
+    
+    # Volume mounts
+    volumeMounts: []
+    volumes: []
+    
+    # Command and args
+    command: []
+    args: []
+    
+    # Lifecycle hooks
+    lifecycle: {}
+    
+    # Init containers
+    initContainers: []
+    
+    # Sidecar containers
+    sidecarContainers: []
+    
+    # Additional secrets to load
+    additionalSecrets: []
+    
+    # Image pull secrets
+    imagePullSecrets: []
+    
+    # Pod disruption budget
+    podDisruptionBudget:
+      enabled: false
+      minAvailable: 1
+    
+    # Network policies
+    networkPolicy:
+      enabled: false
+      ingress: []
+      egress: []
+    
+    # Service account
+    serviceAccount:
+      create: true
+      name: ""
+      annotations: {}
+    
+    # RBAC
+    rbac:
+      enabled: true
+      rules: []
+    
+    # Pod security standards
+    podSecurityStandards:
+      enabled: false
+      level: "restricted"
+      version: "v1.24"
+  
+  # Monitoring Service configuration (for monitoring and alerting)
+  monitoring:
+    enabled: false
+    replicas: 1
+    
+    # Image configuration
+    image:
+      repository: "workfx/workfx-ai-monitoring"
+      tag: "latest"
+      pullPolicy: "IfNotPresent"
+    
+    # Service configuration
+    service:
+      type: "ClusterIP"
+      port: 8006
+      targetPort: 8006
+    
+    # Resources
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+    
+    # Health checks
+    livenessProbe:
+      enabled: true
+      path: "/health"
+      port: 8006
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    
+    readinessProbe:
+      enabled: true
+      path: "/ready"
+      port: 8006
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    
+    # Auto-scaling
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+    
+    # Pod configuration
+    podAnnotations: {}
+    podLabels: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    priorityClassName: ""
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Container security context
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+    
+    # Environment variables
+    env: {}
+    
+    # Volume mounts
+    volumeMounts: []
+    volumes: []
+    
+    # Command and args
+    command: []
+    args: []
+    
+    # Lifecycle hooks
+    lifecycle: {}
+    
+    # Init containers
+    initContainers: []
+    
+    # Sidecar containers
+    sidecarContainers: []
+    
+    # Additional secrets to load
+    additionalSecrets: []
+    
+    # Image pull secrets
+    imagePullSecrets: []
+    
+    # Pod disruption budget
+    podDisruptionBudget:
+      enabled: false
+      minAvailable: 1
+    
+    # Network policies
+    networkPolicy:
+      enabled: false
+      ingress: []
+      egress: []
+    
+    # Service account
+    serviceAccount:
+      create: true
+      name: ""
+      annotations: {}
+    
+    # RBAC
+    rbac:
+      enabled: true
+      rules: []
+    
+    # Pod security standards
+    podSecurityStandards:
+      enabled: false
+      level: "restricted"
+      version: "v1.24"
+  
+  # Authentication and Security
+  auth:
+    adminJwtKey: ""              # Admin JWT key for authentication
+    adminJwtIssuer: "https://www.workfx.ai"
+    adminJwtAudience: "https://www.workfx.ai"
+    aiJwtKey: ""                 # AI JWT key for AI service authentication
+    aiJwtIssuer: "https://www.workfx.ai"
+    aiJwtAudience: "https://www.workfx.ai"
+    dataSecret: ""               # Data encryption secret
+    internalApiKeys: []          # Internal API keys for service-to-service auth
+  
+  # Billing Configuration
+  billing:
+    enabled: true                # Enable billing features
+    stripe:
+      apiKey: ""                 # Stripe API key
+      webhookSecret: ""          # Stripe webhook secret
+      publishableKey: ""         # Stripe publishable key
+  
+  # Agent Evaluation Configuration
+  agentEvaluation:
+    endpoint: ""                 # Agent evaluation service endpoint
+    apiKey: ""                   # Agent evaluation API key
+  
+  # Storage Configuration
+  storage:
+    type: "azure"                # Storage type (azure, aws, local)
+    azureConnectionString: ""    # Azure Storage connection string
+    bucketUriPath: ""            # Bucket URI path
+    adminBucketName: "admin-bucket"
+    userBucketName: "user-bucket"
+    publicBucketName: "public-bucket"
+    emailBucketName: "email-bucket"
+    toolsImageBucketName: "tools-image-bucket"
+    uploadFileSizeLimit: 15      # MB
+    uploadImageFileSizeLimit: 15 # MB
+    uploadVideoFileSizeLimit: 100 # MB
+    uploadAudioFileSizeLimit: 100 # MB
+    filesAccessTimeout: 7200     # seconds
+  
+  # Integrations Configuration
+  integrations:
+    jinaApiKey: ""               # Jina Reader API key for URL extraction
+  
 
-# Configuration overrides
-# KA can override these values or use our defaults
+
+# Infrastructure services configuration
+# These services can be deployed by Helm or connected to external instances
+infrastructure:
+  # PostgreSQL configuration
+  postgresql:
+    enabled: true
+    
+    # Bitnami PostgreSQL chart configuration
+    global:
+      postgresql:
+        auth:
+          postgresPassword: ""
+          username: "workfx"
+          password: ""
+          database: "workfx_ai"
+        primary:
+          persistence:
+            enabled: true
+            size: "20Gi"
+            storageClass: ""
+        readReplicas:
+          enabled: false
+          persistence:
+            enabled: true
+            size: "20Gi"
+            storageClass: ""
+    
+    # External database configuration (when enabled, Helm won't deploy PostgreSQL)
+    external:
+      enabled: false
+      host: ""
+      port: 5432
+      username: ""
+      password: ""
+      database: ""
+      sslMode: "require"
+  
+  # Redis configuration
+  redis:
+    enabled: true
+    
+    # Bitnami Redis chart configuration
+    auth:
+      enabled: true
+      password: ""
+    master:
+      persistence:
+        enabled: true
+        size: "10Gi"
+        storageClass: ""
+    replica:
+      enabled: false
+      persistence:
+        enabled: true
+        size: "10Gi"
+        storageClass: ""
+    
+    # External Redis configuration (when enabled, Helm won't deploy Redis)
+    external:
+      enabled: false
+      host: ""
+      port: 6379
+      password: ""
+      database: 0
+  
+  # Kafka configuration for CDC operations
+  kafka:
+    enabled: true
+    
+    # Bitnami Kafka chart configuration
+    auth:
+      clientProtocol: plaintext
+      interBrokerProtocol: plaintext
+      tls:
+        enabled: false
+    zookeeper:
+      enabled: true
+      persistence:
+        enabled: true
+        size: "8Gi"
+        storageClass: ""
+    persistence:
+      enabled: true
+      size: "10Gi"
+      storageClass: ""
+    
+    # External Kafka configuration (when enabled, Helm won't deploy Kafka)
+    external:
+      enabled: false
+      bootstrapServers: ""
+      securityProtocol: "PLAINTEXT"
+      username: ""
+      password: ""
+    
+    # Kafka topics and consumer configuration
+    topics:
+      documentChunks: "postgres.public.document_chunks"
+      agents: "postgres.public.agents"
+    consumerGroupPrefix: "workfx-ai"
+  
+  # Elasticsearch configuration
+  elasticsearch:
+    enabled: true
+    
+    # Bitnami Elasticsearch chart configuration
+    master:
+      replicas: 1
+      persistence:
+        enabled: true
+        size: "8Gi"
+        storageClass: ""
+    data:
+      replicas: 1
+      persistence:
+        enabled: true
+        size: "8Gi"
+        storageClass: ""
+    kibana:
+      enabled: true
+      persistence:
+        enabled: true
+        size: "1Gi"
+        storageClass: ""
+    
+    # External Elasticsearch configuration (when enabled, Helm won't deploy Elasticsearch)
+    external:
+      enabled: false
+      host: ""
+      port: 9200
+      username: ""
+      password: ""
+      useSsl: false
+      clusterUrl: ""
+  
+  # AKHQ (Kafka Management UI) configuration
+  akhq:
+    enabled: true
+    
+    # AKHQ chart configuration
+    config:
+      akhq:
+        connections:
+          docker-kafka-server:
+            properties:
+              bootstrap.servers: "{{ .Release.Name }}-kafka:9092"
+    
+    # External AKHQ configuration
+    external:
+      enabled: false
+      url: ""
+  
+
+
+# Application configuration
+# These settings are used by the WorkFX AI services
 config:
-  # Basic application settings
+  # Core application settings
   environment: "dev"
   cloudProvider: "gcp"
   kaName: "wfx"
-  enableOtel: false
+  enableOtel: true
+  logLevel: "INFO"
   
-  # Model configuration (KA can override)
+  # Model configuration
   models:
     embedding:
       provider: "google_ai"
       name: "text-embedding-004"
+      apiKey: ""
+      baseUrl: ""
     rerank:
       provider: "google_ai"
       name: "text-bison-001"
+      apiKey: ""
+      baseUrl: ""
+    llm:
+      provider: "google_ai"
+      name: "gemini-pro"
+      apiKey: ""
+      baseUrl: ""
   
-  # RAG configuration (KA can override)
+  # RAG configuration
   rag:
     summaryBoost: "2.0"
     contentBoost: "1.0"
@@ -182,322 +1266,171 @@ config:
     enableCaching: "true"
     cacheTtlSeconds: "300"
   
-  # Rate limiting (KA can override)
+  # Rate limiting configuration
   rateLimit:
     enabled: true
     redisKeyPrefix: "workfx:rate_limit"
     redisKeyExpireBuffer: "10"
+    
+    # Feature switches
     ipEnabled: false
     tenantEnabled: true
     agentMessageEnabled: true
+    
+    # Time windows
     minuteWindow: "60"
     hourWindow: "3600"
+    dayWindow: "86400"
+    weeklyWindow: "604800"
+    monthlyWindow: "2592000"
+    
+    # Calculation ratios
+    minuteLimitRatio: "0.05"
     dailyLimitHours: "16"
     ipTenantRatio: "0.1"
+    
+    # Global limits
     globalRequestsPerHour: "100000"
     globalRequestsPerMinute: "10000"
     globalRequestsPerDay: "2000000"
+    
+    # Tenant limits
     tenantCapacityMultiplier: "2000"
     defaultTenantRequestsPerHour: "2000"
     defaultTenantRequestsPerMinute: "100"
     defaultTenantRequestsPerDay: "32000"
+    
+    # IP limits
     ipRequestsPerHour: "5000"
     ipRequestsPerMinute: "200"
     ipRequestsPerDay: "64000"
+    
+    # Agent invoke limits
     agentInvokeRequestsPerHour: "2000"
     agentInvokeRequestsPerMinute: "100"
     agentInvokeRequestsPerDay: "32000"
+    
+    # External API limits
     externalApiRequestsPerHour: "300"
     externalApiRequestsPerMinute: "20"
     externalApiRequestsPerDay: "4800"
+    
+    # KA tenant benefits
     kaTenantMultiplier: "10"
-
-# Cloud-specific configuration
-# KA should provide these values based on their environment
-gcp:
-  enabled: false
-  projectId: ""
-  region: ""
-  keyVaultUrl: ""
-  serviceAccountKey: ""  # Base64 encoded service account key
-
-azure:
-  enabled: false
-  tenantId: ""
-  keyVaultUrl: ""
-  aksManagedIdentity: ""
-  storage:
-    type: "azure"
-    bucketUriPath: ""
-    adminBucketName: ""
-    userBucketName: ""
-    publicBucketName: ""
-    toolsImageBucketName: ""
-
-aws:
-  enabled: false
-  region: ""
-  accessKeyId: ""
-  secretAccessKey: ""
-  s3:
-    bucketName: ""
-    region: ""
-
-# External service configuration
-# KA can enable/disable these or use our defaults
-external:
-  # Database (KA can use external or our built-in)
-  database:
-    external: false
-    url: ""  # KA should provide if using external
-    host: "postgresql"
-    port: 5432
-    name: "workfx_ai"
-    user: "workfx_ai"
-    password: ""  # Will be auto-generated if not provided
+    kaTenantBypassRateLimit: true
   
-  # Redis (KA can use external or our built-in)
-  redis:
-    external: false
-    url: ""  # KA should provide if using external
-    host: "redis"
-    port: 6379
-    password: ""  # Will be auto-generated if not provided
+  # URL Extractor configuration
+  urlExtractor:
+    sitemapMaxSize: "10485760"
+    sitemapTimeout: "15"
+    maxSitemapIndexSize: "100"
+    jinaBaseUrl: "https://r.jina.ai/"
+    jinaTimeout: "30"
+    enableSitemap: true
+    enableProvider: true
+    enableDuplicateRemoval: true
   
-  # Elasticsearch (KA can use external or our built-in)
-  elasticsearch:
-    external: false
-    url: ""  # KA should provide if using external
-    host: "elasticsearch"
-    port: 9200
-    username: "elastic"
-    password: ""  # Will be auto-generated if not provided
-  
-  # RabbitMQ (KA can use external or our built-in)
-  rabbitmq:
-    external: false
-    url: ""  # KA should provide if using external
-    host: "rabbitmq"
-    port: 5672
-    username: "user"
-    password: ""  # Will be auto-generated if not provided
 
-# Built-in services (enabled by default, KA can disable if using external)
-postgresql:
-  enabled: true
-  auth:
-    postgresPassword: ""  # Will be auto-generated if not provided
-    database: "workfx_ai"
-    username: "workfx_ai"
-    password: ""  # Will be auto-generated if not provided
-  primary:
-    persistence:
-      enabled: true
-      size: 8Gi
-    resources:
-      limits:
-        cpu: "1000m"
-        memory: "2Gi"
-      requests:
-        cpu: "500m"
-        memory: "1Gi"
 
-redis:
-  enabled: true
-  auth:
-    enabled: true
-    password: ""  # Will be auto-generated if not provided
-  master:
-    persistence:
-      enabled: true
-      size: 4Gi
-    resources:
-      limits:
-        cpu: "500m"
-        memory: "1Gi"
-      requests:
-        cpu: "250m"
-        memory: "512Mi"
-
-elasticsearch:
-  enabled: true
-  auth:
-    enabled: true
-    tls:
-      enabled: true
-  master:
-    persistence:
-      enabled: true
-      size: 10Gi
-    resources:
-      limits:
-        cpu: "2000m"
-        memory: "4Gi"
-      requests:
-        cpu: "1000m"
-        memory: "2Gi"
-
-rabbitmq:
-  enabled: true
-  auth:
-    username: "user"
-    password: ""  # Will be auto-generated if not provided
-  persistence:
-    enabled: true
-    size: 4Gi
-  resources:
-    limits:
-      cpu: "1000m"
-      memory: "2Gi"
-    requests:
-      cpu: "500m"
-      memory: "1Gi"
-
-# Monitoring and observability
-monitoring:
-  # Prometheus metrics
-  prometheus:
-    enabled: true
-    serviceMonitor:
-      enabled: true
-      interval: 30s
-  
-  # Grafana dashboards
-  grafana:
-    enabled: false
-    adminPassword: ""  # Will be auto-generated if not provided
-    persistence:
-      enabled: true
-      size: 2Gi
-  
-  # Jaeger tracing
-  jaeger:
-    enabled: false
-    persistence:
-      enabled: true
-      size: 2Gi
-
-# Security configuration
-security:
-  # Pod security context
-  podSecurityContext:
-    fsGroup: 1000
-    runAsNonRoot: true
-    runAsUser: 1000
-  
-  # Container security context
-  containerSecurityContext:
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - ALL
-    readOnlyRootFilesystem: true
-    runAsNonRoot: true
-    runAsUser: 1000
-  
-  # Network policies
-  networkPolicy:
-    enabled: false
-  
-  # RBAC
-  rbac:
-    enabled: true
-    create: true
-
-# Resource management
-resources:
-  # Default resource requests and limits
-  default:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1000m"
-      memory: "1Gi"
-  
-  # Storage classes
-  storageClasses:
-    default: ""
-    fast: ""
-    slow: ""
-
-# Backup and disaster recovery
-backup:
-  enabled: false
-  schedule: "0 2 * * *"  # Daily at 2 AM
-  retention: 7  # Keep backups for 7 days
-  storage:
-    type: "s3"  # s3, gcs, azure
-    bucket: ""
-    region: ""
-    credentials: ""
-
-# Advanced configuration
-advanced:
-  # Pod disruption budget
-  podDisruptionBudget:
-    enabled: false
-    minAvailable: 1
-  
-  # Horizontal pod autoscaler
-  hpa:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 10
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 80
-  
-  # Pod anti-affinity
-  podAntiAffinity:
-    enabled: true
-    type: "preferred"  # preferred, required
-  
-  # Topology spread constraints
-  topologySpreadConstraints:
-    enabled: false
-    maxSkew: 1
-    topologyKey: "kubernetes.io/hostname"
-    whenUnsatisfiable: "DoNotSchedule"
-
-# Custom configuration
-# KA can add any custom environment variables here
-custom:
-  env: {}
-  # Example:
-  # env:
-  #   CUSTOM_VAR: "custom_value"
-  #   ANOTHER_VAR: "another_value"
-
-# Secrets configuration
-# KA should provide sensitive data here
+# Secret Configuration
+# This section defines all the secrets that will be loaded by the WorkFX AI configuration system
+# The secrets follow the naming convention used in the config system:
+# - Direct field names (e.g., host, port, username)
+# - {secret_id}_{field_name} format (e.g., pg-secret_host, pg-secret_port)
+# - {class_name}_{field_name} format (e.g., DatabaseSettings_host, DatabaseSettings_port)
 secrets:
-  # JWT keys
-  jwt:
-    secretKey: ""  # Will be auto-generated if not provided
-    audience: "https://www.workfx.ai"
-    issuer: "https://www.workfx.ai"
-    aiKey: ""  # Will be auto-generated if not provided
-    managementKey: ""  # Will be auto-generated if not provided
-  
-  # External API keys
-  external:
-    openaiApiKey: ""
-    azureOpenaiApiKey: ""
-    anthropicApiKey: ""
-    cohereApiKey: ""
-  
-  # Database credentials (if using external)
+  create: true
+  # Database Configuration (pg-secret)
   database:
-    password: ""
+    secret_id: "pg-secret"
+    host: "{{ if .Values.infrastructure.postgresql.external.enabled }}{{ .Values.infrastructure.postgresql.external.host }}{{ else }}{{ .Release.Name }}-postgresql{{ end }}"
+    port: "{{ if .Values.infrastructure.postgresql.external.enabled }}{{ .Values.infrastructure.postgresql.external.port }}{{ else }}5432{{ end }}"
+    username: "{{ if .Values.infrastructure.postgresql.external.enabled }}{{ .Values.infrastructure.postgresql.external.username }}{{ else }}{{ .Values.infrastructure.postgresql.global.postgresql.auth.username }}{{ end }}"
+    password: "{{ if .Values.infrastructure.postgresql.external.enabled }}{{ .Values.infrastructure.postgresql.external.password }}{{ else }}{{ .Values.infrastructure.postgresql.global.postgresql.auth.password }}{{ end }}"
+    database: "{{ if .Values.infrastructure.postgresql.external.enabled }}{{ .Values.infrastructure.postgresql.external.database }}{{ else }}{{ .Values.infrastructure.postgresql.global.postgresql.auth.database }}{{ end }}"
   
-  # Redis credentials (if using external)
+  # Redis Configuration (tp-redis-secret)
   redis:
-    password: ""
+    secret_id: "tp-redis-secret"
+    redis_host: "{{ if .Values.infrastructure.redis.external.enabled }}{{ .Values.infrastructure.redis.external.host }}{{ else }}{{ .Release.Name }}-redis-master{{ end }}"
+    redis_port: "{{ if .Values.infrastructure.redis.external.enabled }}{{ .Values.infrastructure.redis.external.port }}{{ else }}6379{{ end }}"
+    redis_password: "{{ if .Values.infrastructure.redis.external.enabled }}{{ .Values.infrastructure.redis.external.password }}{{ else }}{{ .Values.infrastructure.redis.auth.password }}{{ end }}"
+    redis_db: "{{ if .Values.infrastructure.redis.external.enabled }}{{ .Values.infrastructure.redis.external.database }}{{ else }}0{{ end }}"
+    redis_use_ssl: "false"
   
-  # Elasticsearch credentials (if using external)
+  # Elasticsearch Configuration (es-secret)
   elasticsearch:
-    password: ""
+    secret_id: "es-secret"
+    host: "{{ if .Values.infrastructure.elasticsearch.external.enabled }}{{ .Values.infrastructure.elasticsearch.external.host }}{{ else }}{{ .Release.Name }}-elasticsearch{{ end }}"
+    port: "{{ if .Values.infrastructure.elasticsearch.external.enabled }}{{ .Values.infrastructure.elasticsearch.external.port }}{{ else }}9200{{ end }}"
+    username: "{{ if .Values.infrastructure.elasticsearch.external.enabled }}{{ .Values.infrastructure.redis.external.username }}{{ else }}{{ .Values.infrastructure.elasticsearch.auth.username }}{{ end }}"
+    password: "{{ if .Values.infrastructure.elasticsearch.external.enabled }}{{ .Values.infrastructure.elasticsearch.external.password }}{{ else }}{{ .Values.infrastructure.elasticsearch.auth.password }}{{ end }}"
+    use_ssl: "{{ if .Values.infrastructure.elasticsearch.external.enabled }}{{ .Values.infrastructure.elasticsearch.external.useSsl }}{{ else }}false{{ end }}"
+    cluster_url: "{{ if .Values.infrastructure.elasticsearch.external.enabled }}{{ .Values.infrastructure.elasticsearch.external.clusterUrl }}{{ else }}{{ end }}"
   
-  # RabbitMQ credentials (if using external)
-  rabbitmq:
-    password: ""
+  # JWT Configuration (jwt-secret)
+  jwt:
+    secret_id: "jwt-secret"
+    admin_jwt_key: "{{ .Values.workfx.auth.adminJwtKey }}"
+    admin_jwt_issuer: "{{ .Values.workfx.auth.adminJwtIssuer }}"
+    admin_jwt_audience: "{{ .Values.workfx.auth.adminJwtAudience }}"
+    ai_jwt_key: "{{ .Values.workfx.auth.aiJwtKey }}"
+    ai_jwt_issuer: "{{ .Values.workfx.auth.aiJwtIssuer }}"
+    ai_jwt_audience: "{{ .Values.workfx.auth.aiJwtAudience }}"
+  
+  # Security Configuration (secret-key)
+  security:
+    secret_id: "secret-key"
+    data_secret: "{{ .Values.workfx.auth.dataSecret }}"
+    jina_api_key: "{{ .Values.workfx.integrations.jinaApiKey }}"
+  
+  # Model Hosting Configuration (wfx-hosted-models)
+  model_hosting:
+    secret_id: "wfx-hosted-models"
+    # Models configuration will be loaded from the secret JSON
+    # This is just a placeholder for the secret ID
+  
+  # Integration Configuration (wfx-hosted-integrations)
+  integrations:
+    secret_id: "wfx-hosted-integrations"
+    # Integrations configuration will be loaded from the secret JSON
+    # This is just a placeholder for the secret ID
+  
+  # Kafka Configuration (wfx-kafka-secret)
+  kafka:
+    secret_id: "wfx-kafka-secret"
+    bootstrap_servers: "{{ if .Values.infrastructure.kafka.external.enabled }}{{ .Values.infrastructure.kafka.external.bootstrapServers }}{{ else }}{{ .Release.Name }}-kafka:9092{{ end }}"
+    security_protocol: "{{ if .Values.infrastructure.kafka.external.enabled }}{{ .Values.infrastructure.kafka.external.securityProtocol }}{{ else }}PLAINTEXT{{ end }}"
+    document_chunks_topic: "{{ .Values.infrastructure.kafka.topics.documentChunks }}"
+    agents_topic: "{{ .Values.infrastructure.kafka.topics.agents }}"
+    consumer_group_prefix: "{{ .Values.infrastructure.kafka.consumerGroupPrefix }}"
+    username: "{{ if .Values.infrastructure.kafka.external.enabled }}{{ .Values.infrastructure.kafka.external.username }}{{ else }}{{ end }}"
+    password: "{{ if .Values.infrastructure.kafka.external.enabled }}{{ .Values.infrastructure.kafka.external.password }}{{ end }}"
+  
+  # Payment Gateway Configuration (wfx-payment-gateway-secret)
+  payment_gateway:
+    secret_id: "wfx-payment-gateway-secret"
+    stripe:
+      api_key: "{{ .Values.workfx.billing.stripe.apiKey }}"
+      webhook_secret: "{{ .Values.workfx.billing.stripe.webhookSecret }}"
+      publishable_key: "{{ .Values.workfx.billing.stripe.publishableKey }}"
+  
+  # Agent Evaluation Configuration (wfx-agent-evaluation-secret)
+  agent_evaluation:
+    secret_id: "wfx-agent-evaluation-secret"
+    endpoint: "{{ .Values.workfx.agentEvaluation.endpoint }}"
+    api_key: "{{ .Values.workfx.agentEvaluation.apiKey }}"
+  
+  # Azure Storage Connection (azure-storage-connection-string)
+  azure_storage:
+    secret_id: "azure-storage-connection-string"
+    azure_connection_string: "{{ .Values.workfx.storage.azureConnectionString }}"
+  
+  # Internal API Keys (internal-service-key)
+  internal_api_keys:
+    secret_id: "internal-service-key"
+    internal_api_keys: "{{ .Values.workfx.auth.internalApiKeys }}"
+
+
+
+

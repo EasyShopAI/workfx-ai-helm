@@ -1,3 +1,4 @@
+{{- if .Values.configmap.create }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -5,22 +6,63 @@ metadata:
   labels:
     {{- include "workfx-ai.labels" . | nindent 4 }}
 data:
-  # Basic application configuration
-  ENV: {{ .Values.config.environment | quote }}
-  CLOUD_TYPE: {{ .Values.config.cloudProvider | quote }}
+  # Global Configuration
+  ENV: {{ .Values.global.environment | quote }}
+  APP_NAME: {{ .Values.global.appName | quote }}
+  LOG_LEVEL: {{ .Values.global.logLevel | quote }}
+  CLOUD_TYPE: {{ .Values.global.cloudProvider | quote }}
+  
+  # Cloud Provider Configuration
+  {{- if eq .Values.global.cloudProvider "azure" }}
+  AZURE_KEYVAULT_URL: {{ .Values.global.azure.keyVaultUrl | quote }}
+  AZURE_CLIENT_ID: {{ .Values.global.azure.clientId | quote }}
+  AZURE_CLIENT_SECRET: {{ .Values.global.azure.clientSecret | quote }}
+  AZURE_TENANT_ID: {{ .Values.global.azure.tenantId | quote }}
+  {{- end }}
+  
+  {{- if eq .Values.global.cloudProvider "aws" }}
+  AWS_REGION: {{ .Values.global.aws.region | quote }}
+  AWS_ACCESS_KEY_ID: {{ .Values.global.aws.accessKeyId | quote }}
+  AWS_SECRET_ACCESS_KEY: {{ .Values.global.aws.secretAccessKey | quote }}
+  {{- end }}
+  
+  {{- if eq .Values.global.cloudProvider "gcp" }}
+  GCP_PROJECT_ID: {{ .Values.global.gcp.projectId | quote }}
+  GCP_REGION: {{ .Values.global.gcp.region | quote }}
+  {{- end }}
+  
+  # Application Configuration
   KA_NAME: {{ .Values.config.kaName | quote }}
-  
-  # OpenTelemetry configuration
   ENABLE_OPTEL: {{ .Values.config.enableOtel | quote }}
-  OTEL_SERVICE_NAME: "{{ include "workfx-ai.fullname" . }}"
   
-  # Model configuration
+  # Storage Configuration
+  STORAGE_TYPE: {{ .Values.workfx.storage.type | quote }}
+  STORAGE_BUCKET_URI_PATH: {{ .Values.workfx.storage.bucketUriPath | quote }}
+  STORAGE_ADMIN_BUCKET_NAME: {{ .Values.workfx.storage.adminBucketName | quote }}
+  STORAGE_USER_BUCKET_NAME: {{ .Values.workfx.storage.userBucketName | quote }}
+  STORAGE_PUBLIC_BUCKET_NAME: {{ .Values.workfx.storage.publicBucketName | quote }}
+  STORAGE_EMAIL_BUCKET_NAME: {{ .Values.workfx.storage.emailBucketName | quote }}
+  STORAGE_TOOLS_IMAGE_BUCKET_NAME: {{ .Values.workfx.storage.toolsImageBucketName | quote }}
+  STORAGE_UPLOAD_FILE_SIZE_LIMIT: {{ .Values.workfx.storage.uploadFileSizeLimit | quote }}
+  STORAGE_UPLOAD_IMAGE_FILE_SIZE_LIMIT: {{ .Values.workfx.storage.uploadImageFileSizeLimit | quote }}
+  STORAGE_UPLOAD_VIDEO_FILE_SIZE_LIMIT: {{ .Values.workfx.storage.uploadVideoFileSizeLimit | quote }}
+  STORAGE_UPLOAD_AUDIO_FILE_SIZE_LIMIT: {{ .Values.workfx.storage.uploadAudioFileSizeLimit | quote }}
+  STORAGE_FILES_ACCESS_TIMEOUT: {{ .Values.workfx.storage.filesAccessTimeout | quote }}
+  
+  # Billing Configuration
+  ENABLE_BILLING: {{ .Values.workfx.billing.enabled | quote }}
+  ENABLE_STRIPE: {{ .Values.workfx.billing.stripe.enabled | quote }}
+  
+  # Integrations Configuration
+  JINA_API_KEY: {{ .Values.workfx.integrations.jinaApiKey | quote }}
+  
+  # Model Configuration
   EMBEDDING_MODEL_PROVIDER: {{ .Values.config.models.embedding.provider | quote }}
-  EMBEDDING_MODEL_NAME: {{ .Values.config.models.embedding.name | quote }}
+  EMBEDDING_MODEL: {{ .Values.config.models.embedding.name | quote }}
   RERANK_MODEL_PROVIDER: {{ .Values.config.models.rerank.provider | quote }}
-  RERANK_MODEL_NAME: {{ .Values.config.models.rerank.name | quote }}
+  RERANK_MODEL: {{ .Values.config.models.rerank.name | quote }}
   
-  # RAG configuration
+  # RAG Configuration
   RAG_SUMMARY_BOOST: {{ .Values.config.rag.summaryBoost | quote }}
   RAG_CONTENT_BOOST: {{ .Values.config.rag.contentBoost | quote }}
   RAG_DISTILLED_KNOWLEDGE_BOOST: {{ .Values.config.rag.distilledKnowledgeBoost | quote }}
@@ -37,7 +79,7 @@ data:
   RAG_ENABLE_CACHING: {{ .Values.config.rag.enableCaching | quote }}
   RAG_CACHE_TTL_SECONDS: {{ .Values.config.rag.cacheTtlSeconds | quote }}
   
-  # Rate limiting configuration
+  # Rate Limiting Configuration
   RATE_LIMIT_ENABLED: {{ .Values.config.rateLimit.enabled | quote }}
   RATE_LIMIT_REDIS_KEY_PREFIX: {{ .Values.config.rateLimit.redisKeyPrefix | quote }}
   RATE_LIMIT_REDIS_KEY_EXPIRE_BUFFER: {{ .Values.config.rateLimit.redisKeyExpireBuffer | quote }}
@@ -46,6 +88,10 @@ data:
   RATE_LIMIT_AGENT_MESSAGE_ENABLED: {{ .Values.config.rateLimit.agentMessageEnabled | quote }}
   RATE_LIMIT_MINUTE_WINDOW: {{ .Values.config.rateLimit.minuteWindow | quote }}
   RATE_LIMIT_HOUR_WINDOW: {{ .Values.config.rateLimit.hourWindow | quote }}
+  RATE_LIMIT_DAY_WINDOW: {{ .Values.config.rateLimit.dayWindow | quote }}
+  RATE_LIMIT_WEEKLY_WINDOW: {{ .Values.config.rateLimit.weeklyWindow | quote }}
+  RATE_LIMIT_MONTHLY_WINDOW: {{ .Values.config.rateLimit.monthlyWindow | quote }}
+  RATE_LIMIT_MINUTE_LIMIT_RATIO: {{ .Values.config.rateLimit.minuteLimitRatio | quote }}
   RATE_LIMIT_DAILY_LIMIT_HOURS: {{ .Values.config.rateLimit.dailyLimitHours | quote }}
   RATE_LIMIT_IP_TENANT_RATIO: {{ .Values.config.rateLimit.ipTenantRatio | quote }}
   RATE_LIMIT_GLOBAL_REQUESTS_PER_HOUR: {{ .Values.config.rateLimit.globalRequestsPerHour | quote }}
@@ -65,97 +111,23 @@ data:
   RATE_LIMIT_EXTERNAL_API_REQUESTS_PER_MINUTE: {{ .Values.config.rateLimit.externalApiRequestsPerMinute | quote }}
   RATE_LIMIT_EXTERNAL_API_REQUESTS_PER_DAY: {{ .Values.config.rateLimit.externalApiRequestsPerDay | quote }}
   RATE_LIMIT_KA_TENANT_MULTIPLIER: {{ .Values.config.rateLimit.kaTenantMultiplier | quote }}
-  
-  # Cloud-specific configuration
-  {{- if eq .Values.config.cloudProvider "gcp" }}
-  {{- if .Values.gcp.enabled }}
-  GCP_PROJECT_ID: {{ .Values.gcp.projectId | quote }}
-  GCP_REGION: {{ .Values.gcp.region | quote }}
-  {{- if .Values.gcp.keyVaultUrl }}
-  AZURE_KEYVAULT_URL: {{ .Values.gcp.keyVaultUrl | quote }}
-  {{- end }}
-  {{- end }}
-  {{- end }}
-  
-  {{- if eq .Values.config.cloudProvider "azure" }}
-  {{- if .Values.azure.enabled }}
-  TENANT_ID: {{ .Values.azure.tenantId | quote }}
-  AZURE_KEYVAULT_URL: {{ .Values.azure.keyVaultUrl | quote }}
-  AKS_MANAGED_IDENTITY: {{ .Values.azure.aksManagedIdentity | quote }}
-  STORAGE_TYPE: {{ .Values.azure.storage.type | quote }}
-  STORAGE_BUCKET_URI_PATH: {{ .Values.azure.storage.bucketUriPath | quote }}
-  STORAGE_ADMIN_BUCKET_NAME: {{ .Values.azure.storage.adminBucketName | quote }}
-  STORAGE_USER_BUCKET_NAME: {{ .Values.azure.storage.userBucketName | quote }}
-  STORAGE_PUBLIC_BUCKET_NAME: {{ .Values.azure.storage.publicBucketName | quote }}
-  STORAGE_TOOLS_IMAGE_BUCKET_NAME: {{ .Values.azure.storage.toolsImageBucketName | quote }}
-  {{- end }}
-  {{- end }}
-  
-  {{- if eq .Values.config.cloudProvider "aws" }}
-  {{- if .Values.aws.enabled }}
-  AWS_REGION: {{ .Values.aws.region | quote }}
-  STORAGE_TYPE: "aws"
-  STORAGE_BUCKET_URI_PATH: "https://{{ .Values.aws.s3.bucketName }}.s3.{{ .Values.aws.s3.region }}.amazonaws.com/"
-  STORAGE_ADMIN_BUCKET_NAME: {{ .Values.aws.s3.bucketName | quote }}
-  STORAGE_USER_BUCKET_NAME: {{ .Values.aws.s3.bucketName | quote }}
-  STORAGE_PUBLIC_BUCKET_NAME: {{ .Values.aws.s3.bucketName | quote }}
-  STORAGE_TOOLS_IMAGE_BUCKET_NAME: {{ .Values.aws.s3.bucketName | quote }}
-  {{- end }}
-  {{- end }}
-  
-  # Service endpoints (internal)
-  {{- $fullname := include "workfx-ai.fullname" . }}
-  {{- $namespace := .Release.Namespace }}
-  MANAGEMENT_INTERNAL_SERVICE_ENDPOINT: "http://{{ $fullname }}-api:{{ .Values.workfx.api.service.port }}"
-  AI_INTERNAL_SERVICE_ENDPOINT: "http://{{ $fullname }}-api:{{ .Values.workfx.api.service.port }}"
-  MANAGEMENT_INTERNAL_SERVICE_ENDPOINT_WITH_NAMESPACE: "http://{{ $fullname }}-api.{{ $namespace }}.svc.cluster.local:{{ .Values.workfx.api.service.port }}"
-  
-  # External service endpoints (if using external services)
-  {{- if .Values.external.database.external }}
-  DATABASE_URL: {{ .Values.external.database.url | quote }}
-  {{- else }}
-  DATABASE_HOST: {{ .Values.external.database.host | quote }}
-  DATABASE_PORT: {{ .Values.external.database.port | quote }}
-  DATABASE_NAME: {{ .Values.external.database.name | quote }}
-  DATABASE_USER: {{ .Values.external.database.user | quote }}
-  {{- end }}
-  
-  {{- if .Values.external.redis.external }}
-  REDIS_URL: {{ .Values.external.redis.url | quote }}
-  {{- else }}
-  REDIS_HOST: {{ .Values.external.redis.host | quote }}
-  REDIS_PORT: {{ .Values.external.redis.port | quote }}
-  {{- end }}
-  
-  {{- if .Values.external.elasticsearch.external }}
-  ELASTICSEARCH_URL: {{ .Values.external.elasticsearch.url | quote }}
-  {{- else }}
-  ELASTICSEARCH_URL: "http://{{ $fullname }}-elasticsearch:{{ .Values.external.elasticsearch.port }}"
-  {{- end }}
-  
-  {{- if .Values.external.rabbitmq.external }}
-  RABBITMQ_URL: {{ .Values.external.rabbitmq.url | quote }}
-  {{- else }}
-  RABBITMQ_HOST: {{ .Values.external.rabbitmq.host | quote }}
-  RABBITMQ_PORT: {{ .Values.external.rabbitmq.port | quote }}
-  RABBITMQ_USER: {{ .Values.external.rabbitmq.username | quote }}
-  {{- end }}
+  RATE_LIMIT_KA_TENANT_BYPASS: {{ .Values.config.rateLimit.kaTenantBypassRateLimit | quote }}
   
   # URL Extractor Configuration
-  URL_EXTRACTOR_SITEMAP_MAX_SIZE: "10485760"
-  URL_EXTRACTOR_SITEMAP_TIMEOUT: "15"
-  URL_EXTRACTOR_MAX_SITEMAP_INDEX_SIZE: "100"
-  URL_EXTRACTOR_JINA_BASE_URL: "https://r.jina.ai/"
-  URL_EXTRACTOR_JINA_TIMEOUT: "30"
-  URL_EXTRACTOR_ENABLE_SITEMAP: "true"
-  URL_EXTRACTOR_ENABLE_PROVIDER: "true"
-  URL_EXTRACTOR_ENABLE_DUPLICATE_REMOVAL: "true"
+  URL_EXTRACTOR_SITEMAP_MAX_SIZE: {{ .Values.config.urlExtractor.sitemapMaxSize | quote }}
+  URL_EXTRACTOR_SITEMAP_TIMEOUT: {{ .Values.config.urlExtractor.sitemapTimeout | quote }}
+  URL_EXTRACTOR_MAX_SITEMAP_INDEX_SIZE: {{ .Values.config.urlExtractor.maxSitemapIndexSize | quote }}
+  URL_EXTRACTOR_JINA_BASE_URL: {{ .Values.config.urlExtractor.jinaBaseUrl | quote }}
+  URL_EXTRACTOR_JINA_TIMEOUT: {{ .Values.config.urlExtractor.jinaTimeout | quote }}
+  URL_EXTRACTOR_ENABLE_SITEMAP: {{ .Values.config.urlExtractor.enableSitemap | quote }}
+  URL_EXTRACTOR_ENABLE_PROVIDER: {{ .Values.config.urlExtractor.enableProvider | quote }}
+  URL_EXTRACTOR_ENABLE_DUPLICATE_REMOVAL: {{ .Values.config.urlExtractor.enableDuplicateRemoval | quote }}
   
-  # Development specific settings
-  LOG_LEVEL: "INFO"
-  IS_TEST: "False"
+  # Service Endpoints
+  MANAGEMENT_INTERNAL_SERVICE_ENDPOINT: {{ .Values.workfx.api.service.endpoint | quote }}
   
-  # Custom environment variables (KA can add any custom config here)
-  {{- range $key, $value := .Values.custom.env }}
+  # Custom Configuration
+  {{- range $key, $value := .Values.workfx.config }}
   {{ $key }}: {{ $value | quote }}
   {{- end }}
+{{- end }}

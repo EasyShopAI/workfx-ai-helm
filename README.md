@@ -1,519 +1,375 @@
 # WorkFX AI Helm Chart
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Helm](https://img.shields.io/badge/Helm-3.8+-blue.svg)](https://helm.sh/)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.20+-blue.svg)](https://kubernetes.io/)
+[![Release Charts](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/workfx/workfx-ai-helm/releases)
+[![Kubernetes](https://img.shields.io/badge/kubernetes-1.19+-blue.svg)](https://kubernetes.io/)
+[![Helm](https://img.shields.io/badge/helm-3.0+-blue.svg)](https://helm.sh/)
 
-## 🚀 **像开源软件一样简单部署！**
+Deploy [WorkFX AI Platform](https://workfx.ai), an enterprise-grade AI platform on Kubernetes with Helm chart.
 
-WorkFX AI 是一个企业级 AI 平台，现在支持像 APISIX、Redis 等开源软件一样的一键部署！KA 只需要几个命令就能完成部署，无需复杂的配置。
+## 🚀 Quick Start
 
-## ✨ **主要特性**
-
-- 🎯 **一键部署**: 像其他 Helm chart 一样简单
-- 🔧 **智能默认值**: 开箱即用，无需复杂配置
-- 🌍 **多云支持**: GCP、Azure、AWS 一键切换
-- 📊 **内置服务**: PostgreSQL、Redis、Elasticsearch、RabbitMQ
-- 🔐 **自动密钥生成**: 无需手动创建密钥
-- 📈 **生产就绪**: 自动扩缩容、监控、备份
-- 🎨 **高度可定制**: 支持 KA 自定义所有配置
-
-## 📋 **前置要求**
-
-- Kubernetes 1.20+
-- Helm 3.8+
-- 至少 4GB 可用内存
-- 至少 20GB 可用存储空间
-
-## 🚀 **快速开始**
-
-### 1. 从 GitHub 克隆部署（推荐）
-
-#### **步骤 1: 克隆仓库**
-```bash
-# 克隆 WorkFX AI Helm 仓库
-git clone https://github.com/workfx-ai/workfx-ai-helm.git
-cd workfx-ai-helm
-```
-
-#### **步骤 2: 配置部署参数**
-```bash
-# 编辑配置文件，替换关键参数
-vim charts/workfx-ai/values-ka-example.yaml
-
-# 或者直接使用命令行参数覆盖
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai \
-  --set global.domain=your-company.com \
-  --set global.imageRegistry=your-registry.com/workfx-ai
-```
-
-#### **步骤 3: 执行部署**
-```bash
-# 使用配置文件部署
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai \
-  -f charts/workfx-ai/values-ka-example.yaml
-
-# 或者使用命令行参数部署
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai \
-  --set global.domain=your-company.com
-```
-
-### 2. 自定义部署
+### 1. Add Helm Repository
 
 ```bash
-# 自定义配置部署
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai \
-  --set global.domain=your-domain.com \
-  --set global.cloudProvider=azure \
-  --set workfx.api.replicas=3 \
-  --set workfx.api.resources.limits.cpu=4000m
-```
-
-### 3. 使用配置文件
-
-```bash
-# 使用自定义配置文件
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai \
-  -f values-ka-example.yaml
-```
-
-## 🌟 **部署示例**
-
-### GCP 环境
-
-```bash
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai \
-  --set global.domain=workfx.yourcompany.com \
-  --set global.cloudProvider=gcp \
-  --set gcp.enabled=true \
-  --set gcp.projectId=your-gcp-project
-```
-
-### Azure 环境
-
-```bash
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai \
-  --set global.domain=workfx.yourcompany.com \
-  --set global.cloudProvider=azure \
-  --set azure.enabled=true \
-  --set azure.tenantId=your-tenant-id
-```
-
-### 使用外部服务
-
-```bash
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai \
-  --set postgresql.enabled=false \
-  --set external.database.external=true \
-  --set external.database.url="your-db-url"
-```
-
-## 📚 **详细部署指南**
-
-### **方法 1: 从 GitHub 克隆部署（推荐）**
-
-#### **前置要求**
-- Kubernetes 1.20+
-- Helm 3.8+
-- Git
-- 至少 4GB 可用内存
-- 至少 20GB 可用存储空间
-
-#### **完整部署步骤**
-
-##### **步骤 1: 克隆仓库**
-```bash
-# 克隆 WorkFX AI Helm 仓库
-git clone https://github.com/workfx-ai/workfx-ai-helm.git
-cd workfx-ai-helm
-
-# 验证文件结构
-ls -la charts/workfx-ai/
-```
-
-##### **步骤 2: 配置部署参数**
-
-**选项 A: 编辑配置文件（推荐）**
-```bash
-# 编辑示例配置文件
-vim charts/workfx-ai/values-ka-example.yaml
-
-# 关键配置项说明：
-# - global.domain: 替换为你的域名
-# - global.imageRegistry: 替换为你的镜像仓库
-# - secrets.jwt.secretKey: 替换为实际的 JWT 密钥
-# - external.database.url: 替换为实际的数据库连接字符串
-```
-
-**选项 B: 使用命令行参数覆盖**
-```bash
-# 直接使用命令行参数，无需编辑文件
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai \
-  --set global.domain=workfx.yourcompany.com \
-  --set global.imageRegistry=your-registry.com/workfx-ai \
-  --set secrets.jwt.secretKey=your-actual-secret-key \
-  --set external.database.url="postgresql://user:pass@host:5432/db"
-```
-
-##### **步骤 3: 执行部署**
-```bash
-# 使用配置文件部署
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai \
-  -f charts/workfx-ai/values-ka-example.yaml
-
-# 验证部署状态
-helm list -n workfx-ai
-kubectl get pods -n workfx-ai
-```
-
-##### **步骤 4: 验证部署**
-```bash
-# 检查所有 Pod 状态
-kubectl get pods -n workfx-ai
-
-# 检查服务状态
-kubectl get svc -n workfx-ai
-
-# 查看日志
-kubectl logs -n workfx-ai deployment/workfx-ai-api
-```
-
-#### **配置参数说明**
-
-**必需配置项**
-```bash
-# 域名配置
---set global.domain=workfx.yourcompany.com
-
-# 镜像仓库
---set global.imageRegistry=your-registry.com/workfx-ai
-
-# JWT 密钥
---set secrets.jwt.secretKey=your-secret-key
---set secrets.jwt.audience=https://workfx.yourcompany.com
---set secrets.jwt.issuer=https://workfx.yourcompany.com
-```
-
-**可选配置项**
-```bash
-# 云提供商
---set global.cloudProvider=azure  # 或 gcp, aws
-
-# 资源限制
---set workfx.api.replicas=3
---set workfx.api.resources.limits.cpu=4000m
---set workfx.api.resources.limits.memory=8Gi
-
-# 存储配置
---set postgresql.primary.persistence.size=50Gi
---set redis.master.persistence.size=20Gi
-```
-
-#### **常见问题解决**
-
-**问题 1: 镜像拉取失败**
-```bash
-# 检查镜像仓库配置
-kubectl describe pod -n workfx-ai <pod-name>
-
-# 解决方案：确保镜像仓库地址正确且可访问
---set global.imageRegistry=your-registry.com/workfx-ai
-```
-
-**问题 2: 数据库连接失败**
-```bash
-# 检查数据库配置
-kubectl logs -n workfx-ai deployment/workfx-ai-api | grep database
-
-# 解决方案：验证数据库连接字符串
---set external.database.url="postgresql://user:pass@host:5432/db"
-```
-
-**问题 3: 域名无法访问**
-```bash
-# 检查 Ingress 配置
-kubectl get ingress -n workfx-ai
-
-# 解决方案：确保域名 DNS 解析正确
---set global.domain=workfx.yourcompany.com
-```
-
-### **方法 2: 使用外部 Helm 仓库（未来支持）**
-
-> **注意**: 此功能正在开发中，未来将支持直接从 Helm Hub 安装。
-
-```bash
-# 未来将支持的一键安装方式
-helm repo add workfx-ai https://helm.workfx.ai
+helm repo add workfx-ai https://workfx.github.io/workfx-ai-helm
 helm repo update
+```
+
+### 2. Install WorkFX AI Platform
+
+#### Development Environment (Recommended for testing)
+
+```bash
 helm install workfx-ai workfx-ai/workfx-ai \
-  --create-namespace \
   --namespace workfx-ai \
-  --set global.domain=your-company.com
-```
-
-## 📋 **配置选项**
-
-### 基础配置
-
-| 参数 | 说明 | 默认值 |
-|------|------|--------|
-| `global.domain` | 应用域名 | `workfx-ai.local` |
-| `global.cloudProvider` | 云提供商 | `gcp` |
-| `workfx.api.replicas` | API 服务副本数 | `2` |
-| `workfx.api.resources.limits.cpu` | CPU 限制 | `2000m` |
-| `workfx.api.resources.limits.memory` | 内存限制 | `4Gi` |
-
-### 模型配置
-
-```bash
-# 使用 OpenAI 模型
---set config.models.embedding.provider=openai \
---set config.models.embedding.name=text-embedding-ada-002
-
-# 使用 Azure OpenAI
---set config.models.embedding.provider=azure_openai \
---set config.models.embedding.name=text-embedding-ada-002
-```
-
-### 存储配置
-
-```bash
-# 自定义存储大小
---set postgresql.primary.persistence.size=20Gi \
---set redis.master.persistence.size=10Gi \
---set elasticsearch.master.persistence.size=50Gi
-
-# 使用外部存储
---set postgresql.enabled=false \
---set external.database.external=true \
---set external.database.url="your-db-url"
-```
-
-## 🔐 **密钥管理**
-
-### 自动生成（推荐）
-
-```bash
-# Helm 会自动生成所有必要的密钥
-helm install workfx-ai ./charts/workfx-ai \
   --create-namespace \
-  --namespace workfx-ai
+  -f values-dev.yaml
 ```
 
-### 手动提供
+#### Production Environment
 
 ```bash
-# 提供自定义密钥
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
+helm install workfx-ai workfx-ai/workfx-ai \
   --namespace workfx-ai \
-  --set secrets.jwt.secretKey="your-secret-key" \
-  --set secrets.external.openaiApiKey="your-openai-key"
-```
-
-## 📊 **监控和扩展**
-
-### 启用监控
-
-```bash
-helm install workfx-ai ./charts/workfx-ai \
   --create-namespace \
-  --namespace workfx-ai \
-  --set monitoring.prometheus.enabled=true \
-  --set monitoring.grafana.enabled=true \
-  --set monitoring.jaeger.enabled=true
-```
-
-### 自动扩缩容
-
-```bash
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai \
-  --set workfx.api.autoscaling.enabled=true \
-  --set workfx.api.autoscaling.minReplicas=3 \
-  --set workfx.api.autoscaling.maxReplicas=20
-```
-
-## 🚨 **故障排除**
-
-### 检查部署状态
-
-```bash
-# 查看所有资源
-kubectl get all -n workfx-ai
-
-# 查看 Pod 状态
-kubectl get pods -n workfx-ai
-
-# 查看服务状态
-kubectl get svc -n workfx-ai
-```
-
-### 查看日志
-
-```bash
-# 查看 API 服务日志
-kubectl logs -f deployment/workfx-ai-api -n workfx-ai
-
-# 查看数据同步服务日志
-kubectl logs -f deployment/workfx-ai-data-sync -n workfx-ai
-```
-
-## 🔄 **升级和回滚**
-
-### 升级应用
-
-```bash
-# 升级到新版本
-helm upgrade workfx-ai ./charts/workfx-ai \
-  --namespace workfx-ai \
-  --set image.api.tag=1.1.0 \
-  --set image.dataSync.tag=1.1.0
-```
-
-### 回滚
-
-```bash
-# 查看发布历史
-helm history workfx-ai -n workfx-ai
-
-# 回滚到指定版本
-helm rollback workfx-ai 1 -n workfx-ai
-```
-
-## 📁 **文件结构**
-
-```
-charts/workfx-ai/
-├── Chart.yaml              # Chart 元数据
-├── values.yaml             # 默认配置
-├── values-ka-example.yaml  # KA 配置示例
-├── QUICKSTART.md           # 快速开始指南
-├── templates/              # Kubernetes 模板
-│   ├── configmap.yaml      # 配置映射
-│   ├── secret.yaml         # 密钥
-│   ├── deployment.yaml     # 部署
-│   ├── service.yaml        # 服务
-│   └── ...
-└── charts/                 # 依赖 charts
-    ├── postgresql/         # PostgreSQL
-    ├── redis/              # Redis
-    ├── elasticsearch/      # Elasticsearch
-    └── rabbitmq/           # RabbitMQ
-```
-
-## 🎯 **最佳实践**
-
-### 1. 使用命名空间
-
-```bash
-# 为每个环境创建独立的命名空间
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai-prod
-```
-
-### 2. 使用配置文件
-
-```bash
-# 为不同环境创建配置文件
-# values-prod.yaml, values-staging.yaml, values-dev.yaml
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
-  --namespace workfx-ai-prod \
   -f values-prod.yaml
 ```
 
-### 3. 启用监控
+### 3. Verify Installation
 
 ```bash
-# 生产环境建议启用监控
---set monitoring.prometheus.enabled=true \
---set monitoring.grafana.enabled=true
+kubectl get pods -n workfx-ai
+kubectl get services -n workfx-ai
 ```
 
-### 4. 配置备份
+## 🏗️ Architecture
 
-```bash
-# 生产环境建议启用备份
---set backup.enabled=true \
---set backup.schedule="0 2 * * *" \
---set backup.retention=30
+The following diagram illustrates the complete network architecture and service topology:
+
+```mermaid
+graph TB
+    %% External Traffic Entry Points
+    Internet[🌐 Internet] --> Ingress[🚪 Ingress Controller]
+    Internet --> LB[⚖️ LoadBalancer Service]
+
+    %% Main Traffic Flow
+    Ingress --> APIService[🔧 API Service<br/>Port: 8000]
+    LB --> APIService
+
+    %% Core Services
+    APIService --> APIPod[📦 API Pod<br/>workfx/workfx-ai-api<br/>Port: 8000]
+    CDCService[🔄 CDC Service<br/>Port: 8001] --> CDCPod[📦 CDC Pod<br/>workfx/workfx-ai-cdc<br/>Port: 8001]
+
+    %% Infrastructure Layer
+    subgraph InfrastructureLayer [🏗️ Infrastructure Layer]
+        PostgresService[🐘 PostgreSQL Service<br/>Port: 5432]
+        RedisService[🔴 Redis Service<br/>Port: 6379]
+        KafkaService[📨 Kafka Service<br/>Port: 9092]
+        ElasticsearchService[🔍 Elasticsearch Service<br/>Port: 9200]
+        KibanaService[📊 Kibana Service<br/>Port: 80]
+        AKHQService[🎛️ AKHQ Service<br/>Port: 80]
+    end
+
+    %% Service Connections
+    APIPod -.->|Database Operations| PostgresService
+    CDCPod -.->|Database Operations| PostgresService
+    APIPod -.->|Cache & Sessions| RedisService
+    CDCPod -.->|Message Processing| KafkaService
+    APIPod -.->|Search & Logs| ElasticsearchService
+
+    %% Storage Layer
+    subgraph StorageLayer [💾 Storage Layer]
+        StorageType{Storage Type}
+        LocalPVC[📁 Local PVC]
+        AzureStorage[☁️ Azure Blob]
+        S3Storage[☁️ AWS S3]
+        GCSStorage[☁️ Google Cloud Storage]
+    end
+
+    %% External Services
+    subgraph ExternalServices [🌐 External Services]
+        ExternalDB[(🔧 External PostgreSQL)]
+        ExternalRedis[(🔴 External Redis)]
+        ExternalKafka[(📨 External Kafka)]
+        ExternalES[(🔍 External Elasticsearch)]
+    end
+
+    %% Styling
+    classDef podClass fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef serviceClass fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef storageClass fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef externalClass fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+
+    class APIPod,CDCPod podClass
+    class APIService,CDCService,PostgresService,RedisService,KafkaService,ElasticsearchService,KibanaService,AKHQService serviceClass
+    class PostgresService,RedisService,KafkaService,ElasticsearchService,LocalPVC,AzureStorage,S3Storage,GCSStorage storageClass
+    class ExternalDB,ExternalRedis,ExternalKafka,ExternalES externalClass
 ```
 
-## 🤝 **支持**
+## 🎯 Core Components
 
-- 📖 [快速开始指南](./charts/workfx-ai/QUICKSTART.md)
-- 📋 [完整配置选项](./charts/workfx-ai/values.yaml)
-- 🎨 [KA 配置示例](./charts/workfx-ai/values-ka-example.yaml)
-- 🚨 [故障排除指南](./TROUBLESHOOTING.md)
-- 📧 [技术支持](https://workfx.ai/support)
+| Component | Image | Port | Role |
+|-----------|-------|------|------|
+| **API** | `workfx/workfx-ai-api` | 8000 | RESTful API server, business logic processing |
+| **CDC** | `workfx/workfx-ai-cdc` | 8001 | Change Data Capture service, data synchronization |
+| **PostgreSQL** | `bitnami/postgresql:15` | 5432 | Primary database with vector search support |
+| **Redis** | `bitnami/redis:7` | 6379 | Cache and session storage |
+| **Kafka** | `bitnami/kafka:3` | 9092 | Message queue and stream processing |
+| **Elasticsearch** | `bitnami/elasticsearch:8` | 9200 | Search engine and log aggregation |
+| **Kibana** | `bitnami/kibana:8` | 80 | Elasticsearch management interface |
+| **AKHQ** | `tchiotludo/akhq:latest` | 80 | Kafka management interface |
 
-## 📄 **许可证**
+## 🌟 Key Features
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+### 🚀 **Flexible Deployment Modes**
+- **Complete Mode**: Deploy all infrastructure services
+- **Hybrid Mode**: Mix of Helm-managed and external services
+- **Minimal Mode**: Only deploy application services (perfect for KA users)
 
-## 🤝 **贡献**
+### ☁️ **Multi-Cloud Support**
+- **Azure**: Complete Azure service integration
+- **AWS**: Full AWS service support
+- **GCP**: Google Cloud Platform support
+- **Local**: On-premises Kubernetes deployment
 
-我们欢迎社区贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解如何参与。
+### 🔧 **Smart Configuration Management**
+- **Unified ConfigMap**: All services share single configuration
+- **External Secret Integration**: Support for cloud key management
+- **Environment-Specific**: Pre-configured dev/prod environments
+- **Conditional Rendering**: Intelligent service deployment
 
-## 🎉 **总结**
+### 📊 **Enterprise-Grade Monitoring**
+- **Elasticsearch + Kibana**: Log aggregation and search
+- **AKHQ**: Kafka cluster management
+- **Health Checks**: Built-in health monitoring
+- **Metrics Collection**: Performance and resource monitoring
 
-### **当前部署方式**
+### 🔐 **Security First**
+- **RBAC**: Role-based access control
+- **Network Policies**: Pod-level network isolation
+- **Pod Security Standards**: Kubernetes security best practices
+- **TLS Encryption**: Secure communication
 
-WorkFX AI 目前支持从 GitHub 克隆部署，步骤简单清晰：
+## 📋 Prerequisites
+
+- **Kubernetes**: 1.19+
+- **Helm**: 3.0+
+- **kubectl**: Configured and accessible
+- **Storage Class**: Configured (if using persistent volumes)
+- **Resources**: Minimum 8GB RAM, 4 CPU cores
+
+## 🚀 Deployment Modes
+
+### 1. **Complete Deployment** (All-in-One)
+
+Deploy everything with Helm:
+
+```yaml
+infrastructure:
+  postgresql: enabled: true
+  redis: enabled: true
+  kafka: enabled: true
+  elasticsearch: enabled: true
+  akhq: enabled: true
+```
+
+**Best for**: Development, testing, environments without existing infrastructure
+
+### 2. **Hybrid Deployment** (Mixed)
+
+Use external database/cache, deploy other services:
+
+```yaml
+infrastructure:
+  postgresql: enabled: false, external: enabled: true
+  redis: enabled: false, external: enabled: true
+  kafka: enabled: true
+  elasticsearch: enabled: true
+```
+
+**Best for**: Environments with existing database/cache, mixed cloud setups
+
+### 3. **Minimal Deployment** (KA Users)
+
+Deploy only application services:
+
+```yaml
+infrastructure:
+  postgresql: enabled: false, external: enabled: true
+  redis: enabled: false, external: enabled: true
+  kafka: enabled: false, external: enabled: true
+  elasticsearch: enabled: false, external: enabled: true
+```
+
+**Best for**: Key Account users, production environments with complete infrastructure
+
+## 🔧 Configuration
+
+### Environment-Specific Configs
+
+- **`values-dev.yaml`**: Development environment with reduced resources
+- **`values-prod.yaml`**: Production environment with high availability
+- **Custom values**: Override specific configurations as needed
+
+### External Service Integration
+
+```yaml
+infrastructure:
+  postgresql:
+    enabled: false
+    external:
+      enabled: true
+      host: "your-postgres-host"
+      port: 5432
+      username: "your-username"
+      password: "your-password"
+      database: "your-database"
+```
+
+### Cloud Provider Configuration
+
+```yaml
+global:
+  cloudProvider: "azure"  # azure, aws, gcp, local
+  azure:
+    keyVaultUrl: "https://your-keyvault.vault.azure.net/"
+    clientId: "your-client-id"
+    clientSecret: "your-client-secret"
+    tenantId: "your-tenant-id"
+```
+
+## 📚 Documentation
+
+- **[Architecture Guide](docs/ARCHITECTURE.md)**: Detailed system architecture and design principles
+- **[KA Deployment Guide](docs/KA_DEPLOYMENT_GUIDE.md)**: Specialized guide for Key Account users
+- **[Contents Overview](docs/CONTENTS.md)**: Complete feature and component reference
+- **[Deployment Guide](DEPLOYMENT_GUIDE.md)**: Comprehensive deployment instructions
+
+## 🔍 Monitoring & Access
+
+### Access Kibana
 
 ```bash
-# 1. 克隆仓库
-git clone https://github.com/workfx-ai/workfx-ai-helm.git
-cd workfx-ai-helm
+kubectl port-forward -n workfx-ai svc/workfx-ai-elasticsearch-kibana 8080:80
+# Visit http://localhost:8080
+```
 
-# 2. 配置参数
-vim charts/workfx-ai/values-ka-example.yaml
+### Access AKHQ (Kafka Management)
 
-# 3. 执行部署
-helm install workfx-ai ./charts/workfx-ai \
-  --create-namespace \
+```bash
+kubectl port-forward -n workfx-ai svc/workfx-ai-akhq 8081:80
+# Visit http://localhost:8081
+```
+
+### Application Logs
+
+```bash
+# API Service logs
+kubectl logs -n workfx-ai deployment/workfx-ai-api -f
+
+# CDC Service logs
+kubectl logs -n workfx-ai deployment/workfx-ai-cdc -f
+```
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+1. **Pod Startup Failures**
+   - Check resource limits and requests
+   - Verify image registry access
+   - Validate ConfigMap and Secret configuration
+
+2. **Service Connection Failures**
+   - Verify service names and ports
+   - Check network policy configuration
+   - Validate external service connectivity
+
+3. **Storage Issues**
+   - Check StorageClass configuration
+   - Verify PVC binding status
+   - Check storage quotas
+
+### Debug Commands
+
+```bash
+# Check Pod status
+kubectl get pods -n workfx-ai
+
+# View Pod logs
+kubectl logs -n workfx-ai deployment/workfx-ai-api
+
+# Check ConfigMap
+kubectl get configmap -n workfx-ai workfx-ai-config -o yaml
+
+# Check Secrets
+kubectl get secret -n workfx-ai workfx-ai-secret -o yaml
+
+# Debug Pod
+kubectl exec -it -n workfx-ai deployment/workfx-ai-api -- /bin/bash
+```
+
+## 🔄 Upgrade & Maintenance
+
+### Upgrade Helm Chart
+
+```bash
+helm repo update
+helm upgrade workfx-ai workfx-ai/workfx-ai \
   --namespace workfx-ai \
-  -f charts/workfx-ai/values-ka-example.yaml
-
-# 完成！🎉
+  -f values-prod.yaml
 ```
 
-### **部署优势**
+### Upgrade Application Version
 
-- ✅ **配置清晰** - 每个配置项都有详细注释和说明
-- ✅ **结构完整** - 包含所有必要的服务和依赖
-- ✅ **高度可定制** - 支持 KA 自定义所有配置
-- ✅ **开箱即用** - 内置 PostgreSQL、Redis、Elasticsearch 等服务
-- ✅ **生产就绪** - 支持自动扩缩容、监控、备份
+```bash
+helm upgrade workfx-ai workfx-ai/workfx-ai \
+  --namespace workfx-ai \
+  --set workfx.api.image.tag="new-version" \
+  --set workfx.cdc.image.tag="new-version"
+```
 
-### **未来计划**
+### Rollback
 
-- 🚧 **Helm Hub 发布** - 未来将支持直接从 Helm Hub 安装
-- 🚧 **一键安装脚本** - 提供自动化部署脚本
-- 🚧 **配置向导** - 交互式配置生成工具
+```bash
+helm history workfx-ai -n workfx-ai
+helm rollback workfx-ai <revision> -n workfx-ai
+```
 
-**现在 KA 可以按照详细部署指南，轻松完成 WorkFX AI 的部署！**
+## 🗑️ Uninstall
+
+```bash
+helm uninstall workfx-ai -n workfx-ai
+kubectl delete namespace workfx-ai
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+## 📄 License
+
+This project is proprietary software. See [LICENSE](LICENSE) for details.
+
+## 🆘 Support
+
+For support and questions:
+
+- **Email**: support@workfx.ai
+- **Website**: https://workfx.ai
+- **GitHub Issues**: [workfx/workfx-ai-helm](https://github.com/workfx/workfx-ai-helm/issues)
+- **Documentation**: [docs/](docs/) directory
+
+## 🏆 Why Choose WorkFX AI Helm Chart?
+
+- **🚀 Production Ready**: Built with enterprise-grade reliability and security
+- **🔧 Flexible**: Support for multiple deployment modes and cloud providers
+- **📊 Observable**: Comprehensive monitoring and logging out of the box
+- **🔄 Scalable**: Horizontal and vertical scaling capabilities
+- **🔐 Secure**: Security-first design with RBAC and network policies
+- **📚 Well Documented**: Extensive documentation and examples
+- **🤝 Community Driven**: Active development and community support
+
+---
+
+**Ready to deploy?** Start with our [Quick Start](#-quick-start) guide or dive deep into our [documentation](docs/)!

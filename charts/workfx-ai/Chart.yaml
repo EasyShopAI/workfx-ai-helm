@@ -1,91 +1,85 @@
 apiVersion: v2
 name: workfx-ai
-description: WorkFX-AI - Enterprise AI Workflow Platform for Private Cloud Deployment
-
-# A chart can be either an 'application' or a 'library' chart.
-#
-# Application charts are a collection of templates that can be packaged into versioned archives
-# to be deployed.
-#
-# Library charts provide useful utilities or functions for the chart developer. They're included as
-# a dependency of application charts to inject those utilities or functions into the rendering
-# pipeline. Library charts do not define any templates and therefore cannot be deployed.
+description: A Helm chart for WorkFX AI Platform - Enterprise AI platform with modular architecture
 type: application
-
-# This is the chart version. This version number should be incremented each time you make changes
-# to the chart and its templates, including the app version.
-# Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 1.0.0
-
-# This is the version number of the application being deployed. This version number should be
-# incremented each time you make changes to the application. They should reflect the version the application is using.
-# It is recommended to use it with quotes.
+version: 0.2.0
 appVersion: "1.0.0"
-
-# Keywords to help users find this chart
 keywords:
+  - workfx
   - ai
-  - workflow
+  - platform
   - enterprise
-  - private-cloud
-  - automation
-
-# Home page for the chart
+  - kubernetes
+  - helm
 home: https://workfx.ai
-
-# Source code repository
 sources:
-  - https://github.com/your-org/workfx-ai
-
-# Maintainers information
+  - https://github.com/workfx/workfx-ai
+  - https://github.com/workfx/workfx-ai-helm
 maintainers:
-  - name: WorkFX Team
+  - name: WorkFX AI Team
     email: support@workfx.ai
     url: https://workfx.ai
+icon: https://workfx.ai/favicon.ico
 
-# Icon for the chart
-icon: https://workfx.ai/logo.png
-
-# Annotations for the chart
-annotations:
-  category: AI/ML
-  licenses: Proprietary
-  vendor: WorkFX
-
-# Dependencies for the chart
+# Dependencies on sub-charts
 dependencies:
+  # Database
   - name: postgresql
-    version: 12.5.6
+    version: 12.5.8
+    condition: infrastructure.postgresql.enabled
     repository: https://charts.bitnami.com/bitnami
-    condition: postgresql.enabled
     tags:
       - database
       - postgres
+  
+  # Cache
   - name: redis
-    version: 17.3.2
+    version: 17.10.3
+    condition: infrastructure.redis.enabled
     repository: https://charts.bitnami.com/bitnami
-    condition: redis.enabled
     tags:
       - cache
       - redis
-  - name: rabbitmq
-    version: 11.8.0
+  
+  # Message Queue
+  - name: kafka
+    version: 25.0.0
+    condition: infrastructure.kafka.enabled
     repository: https://charts.bitnami.com/bitnami
-    condition: rabbitmq.enabled
     tags:
-      - message-queue
-      - rabbitmq
+      - messaging
+      - kafka
+  
+  # Search Engine
   - name: elasticsearch
-    version: 8.5.1
+    version: 19.17.0
+    condition: infrastructure.elasticsearch.enabled
     repository: https://charts.bitnami.com/bitnami
-    condition: elasticsearch.enabled
     tags:
       - search
       - elasticsearch
+  
+  # Log Management
   - name: kibana
-    version: 8.5.1
+    version: 10.1.0
+    condition: infrastructure.kibana.enabled
     repository: https://charts.bitnami.com/bitnami
-    condition: kibana.enabled
+    tags:
+      - logging
+      - kibana
+  
+  # Kafka Management UI
+  - name: akhq
+    version: 0.23.0
+    condition: infrastructure.akhq.enabled
+    repository: https://akhq.io/
     tags:
       - monitoring
-      - kibana
+      - kafka-ui
+
+# Annotations
+annotations:
+  category: AI/ML
+  licenses: Proprietary
+  vendor: WorkFX AI
+  support: support@workfx.ai

@@ -1,0 +1,53 @@
+WorkFX AI Platform has been deployed successfully!
+
+{{- if .Values.workfx.api.enabled }}
+API Service:
+  - Status: {{ if .Values.workfx.api.enabled }}Enabled{{ else }}Disabled{{ end }}
+  - Service: {{ include "workfx-ai.fullname" . }}-api
+  - Port: {{ .Values.workfx.api.service.port }}
+  {{- if .Values.workfx.api.ingress.enabled }}
+  - Ingress: {{ .Values.workfx.api.ingress.hosts | first | get . "host" }}
+  {{- end }}
+{{- end }}
+
+
+
+{{- if .Values.infrastructure.postgresql.enabled }}
+Database:
+  - PostgreSQL: Enabled
+  - Database: {{ .Values.infrastructure.postgresql.global.postgresql.auth.database }}
+  - Username: {{ .Values.infrastructure.postgresql.global.postgresql.auth.username }}
+{{- end }}
+
+{{- if .Values.infrastructure.redis.enabled }}
+Cache:
+  - Redis: Enabled
+{{- end }}
+
+{{- if .Values.infrastructure.rabbitmq.enabled }}
+Message Queue:
+  - RabbitMQ: Enabled
+{{- end }}
+
+{{- if .Values.infrastructure.elasticsearch.enabled }}
+Search:
+  - Elasticsearch: Enabled
+{{- end }}
+
+To check the status of your deployment, run:
+  kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+
+To view the logs of the API service:
+  kubectl logs -l app.kubernetes.io/name={{ include "workfx-ai.fullname" . }}-api
+
+
+
+To access the API service:
+  kubectl port-forward svc/{{ include "workfx-ai.fullname" . }}-api {{ .Values.workfx.api.service.port }}:{{ .Values.workfx.api.service.port }}
+
+{{- if .Values.workfx.api.ingress.enabled }}
+The API service is accessible via Ingress at:
+  {{ .Values.workfx.api.ingress.hosts | first | get . "host" }}
+{{- end }}
+
+For more information, visit: https://github.com/workfx/workfx-ai

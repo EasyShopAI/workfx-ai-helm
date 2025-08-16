@@ -1,0 +1,175 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "workfx-ai.fullname" . }}
+  labels:
+    {{- include "workfx-ai.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.workfx.api.replicas }}
+  selector:
+    matchLabels:
+      {{- include "workfx-ai.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "workfx-ai.selectorLabels" . | nindent 8 }}
+      {{- with .Values.workfx.api.podLabels }}
+      labels:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.workfx.api.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if .Values.workfx.api.serviceAccount.create }}
+      serviceAccountName: {{ include "workfx-ai.serviceAccountName" . }}
+      {{- else }}
+      serviceAccountName: {{ .Values.workfx.api.serviceAccount.name }}
+      {{- end }}
+      
+      {{- with .Values.workfx.api.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.workfx.api.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.workfx.api.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- if .Values.workfx.api.priorityClassName }}
+      priorityClassName: {{ .Values.workfx.api.priorityClassName }}
+      {{- end }}
+      
+      {{- with .Values.workfx.api.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.workfx.api.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.workfx.api.image.repository }}:{{ .Values.workfx.api.image.tag }}"
+        imagePullPolicy: {{ .Values.workfx.api.image.pullPolicy }}
+        
+        {{- with .Values.workfx.api.command }}
+        command:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        
+        {{- with .Values.workfx.api.args }}
+        args:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        
+        ports:
+        - name: http
+          containerPort: {{ .Values.workfx.api.service.port }}
+          protocol: TCP
+        
+        {{- with .Values.workfx.api.containerSecurityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        
+        env:
+        # Only essential environment variables that can't be loaded from config
+        - name: NODE_ENV
+          value: {{ .Values.global.environment | quote }}
+        
+        # Custom environment variables from values.yaml
+        {{- range $key, $value := .Values.workfx.api.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        
+        envFrom:
+        # Load all configuration from ConfigMap
+        - configMapRef:
+            name: {{ include "workfx-ai.fullname" . }}-config
+        
+        # Load all secrets from the main secret
+        - secretRef:
+            name: {{ include "workfx-ai.secretName" . }}
+        
+        # Load additional secrets if specified
+        {{- range .Values.workfx.api.additionalSecrets }}
+        - secretRef:
+            name: {{ .name }}
+        {{- end }}
+        
+        {{- with .Values.workfx.api.volumeMounts }}
+        volumeMounts:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        
+        {{- if .Values.workfx.api.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.workfx.api.livenessProbe.path }}
+            port: {{ .Values.workfx.api.livenessProbe.port }}
+          initialDelaySeconds: {{ .Values.workfx.api.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.workfx.api.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.workfx.api.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.workfx.api.livenessProbe.failureThreshold }}
+        {{- end }}
+        
+        {{- if .Values.workfx.api.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.workfx.api.readinessProbe.path }}
+            port: {{ .Values.workfx.api.readinessProbe.port }}
+          initialDelaySeconds: {{ .Values.workfx.api.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.workfx.api.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.workfx.api.readinessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.workfx.api.readinessProbe.failureThreshold }}
+        {{- end }}
+        
+        {{- if .Values.workfx.api.startupProbe.enabled }}
+        startupProbe:
+          httpGet:
+            path: {{ .Values.workfx.api.startupProbe.path }}
+            port: {{ .Values.workfx.api.startupProbe.port }}
+          initialDelaySeconds: {{ .Values.workfx.api.startupProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.workfx.api.startupProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.workfx.api.startupProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.workfx.api.startupProbe.failureThreshold }}
+        {{- end }}
+        
+        {{- with .Values.workfx.api.lifecycle }}
+        lifecycle:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        
+        resources:
+          {{- toYaml .Values.workfx.api.resources | nindent 10 }}
+      
+      {{- with .Values.workfx.api.sidecarContainers }}
+      - name: sidecar
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.workfx.api.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- if .Values.workfx.api.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.workfx.api.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      
+      {{- if .Values.workfx.api.podDisruptionBudget.enabled }}
+      podDisruptionBudget:
+        minAvailable: {{ .Values.workfx.api.podDisruptionBudget.minAvailable }}
+      {{- end }}

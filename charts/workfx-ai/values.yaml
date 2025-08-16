@@ -1,6 +1,5 @@
-# Default values for workfx-ai.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# Default values for WorkFX AI
+# This is a YAML-formatted file that contains all the configurable parameters for the WorkFX AI chart.
 
 # Global configuration
 global:
@@ -8,46 +7,42 @@ global:
   environment: "dev"
   # Cloud provider: gcp, azure, aws, local
   cloudProvider: "gcp"
-  # Image registry
-  imageRegistry: ""
-  # Storage class
+  # Image registry (default to our public GCR)
+  imageRegistry: "us-central1-docker.pkg.dev/workfxai-dev/workfx-ai-gar-dev"
+  # Storage class for persistent volumes
   storageClass: ""
-  # Domain for ingress
+  # Domain for ingress (KA should set this)
   domain: ""
+  # Image pull secrets (KA should provide if using private registry)
+  imagePullSecrets: []
 
 # Image configuration
 image:
+  # Main WorkFX AI API service
   api:
-    repository: "workfx-ai-api"
+    repository: "workfx-ai-dev"
     tag: "latest"
     pullPolicy: IfNotPresent
-    pullSecrets: []
   
-  cdc:
-    repository: "workfx-ai-cdc"
+  # Data Sync service
+  dataSync:
+    repository: "workfx-ai-data-sync-dev"
     tag: "latest"
     pullPolicy: IfNotPresent
-    pullSecrets: []
-  
-  idb:
-    repository: "workfx-ai-idb"
-    tag: "latest"
-    pullPolicy: IfNotPresent
-    pullSecrets: []
 
 # Main application configuration
 workfx:
   # API service
   api:
     enabled: true
-    replicas: 1
+    replicas: 2
     resources:
       limits:
-        cpu: "1000m"
-        memory: "1Gi"
+        cpu: "2000m"
+        memory: "4Gi"
       requests:
-        cpu: "500m"
-        memory: "512Mi"
+        cpu: "1000m"
+        memory: "2Gi"
     
     # Health checks
     livenessProbe:
@@ -76,18 +71,28 @@ workfx:
     
     # Ingress configuration
     ingress:
-      enabled: false
-      className: ""
-      annotations: {}
-      hosts: []
-      tls: []
+      enabled: true
+      className: "nginx"
+      annotations:
+        kubernetes.io/ingress.class: nginx
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      hosts:
+        - host: workfx-ai.local  # KA should override this
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: workfx-ai-tls
+          hosts:
+            - workfx-ai.local  # KA should override this
     
     # Auto-scaling
     autoscaling:
-      enabled: false
-      minReplicas: 1
-      maxReplicas: 5
-      targetCPUUtilizationPercentage: 80
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
       targetMemoryUtilizationPercentage: 80
     
     # Pod configuration
@@ -96,17 +101,17 @@ workfx:
     tolerations: []
     priorityClassName: ""
   
-  # CDC service
-  cdc:
+  # Data Sync service
+  dataSync:
     enabled: true
     replicas: 1
     resources:
       limits:
-        cpu: "500m"
-        memory: "512Mi"
+        cpu: "1000m"
+        memory: "2Gi"
       requests:
-        cpu: "250m"
-        memory: "256Mi"
+        cpu: "500m"
+        memory: "1Gi"
     
     # Health checks
     livenessProbe:
@@ -133,156 +138,263 @@ workfx:
       port: 5002
       targetPort: 5002
     
-    # Pod configuration
-    nodeSelector: {}
-    affinity: {}
-    tolerations: []
-    priorityClassName: ""
+    # Auto-scaling
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 3
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+
+# Configuration overrides
+# KA can override these values or use our defaults
+config:
+  # Basic application settings
+  environment: "dev"
+  cloudProvider: "gcp"
+  kaName: "wfx"
+  enableOtel: false
   
-  # IDB service
-  idb:
+  # Model configuration (KA can override)
+  models:
+    embedding:
+      provider: "google_ai"
+      name: "text-embedding-004"
+    rerank:
+      provider: "google_ai"
+      name: "text-bison-001"
+  
+  # RAG configuration (KA can override)
+  rag:
+    summaryBoost: "2.0"
+    contentBoost: "1.0"
+    distilledKnowledgeBoost: "1.5"
+    keywordsBoost: "1.0"
+    defaultSearchLimit: "10"
+    maxSearchLimit: "100"
+    defaultVectorK: "10"
+    defaultNumCandidates: "100"
+    vectorSimilarityThreshold: "0.5"
+    rerankTopK: "20"
+    rerankScoreThreshold: "0.5"
+    searchTimeout: "30.0"
+    embeddingTimeout: "10.0"
+    enableCaching: "true"
+    cacheTtlSeconds: "300"
+  
+  # Rate limiting (KA can override)
+  rateLimit:
     enabled: true
-    replicas: 1
+    redisKeyPrefix: "workfx:rate_limit"
+    redisKeyExpireBuffer: "10"
+    ipEnabled: false
+    tenantEnabled: true
+    agentMessageEnabled: true
+    minuteWindow: "60"
+    hourWindow: "3600"
+    dailyLimitHours: "16"
+    ipTenantRatio: "0.1"
+    globalRequestsPerHour: "100000"
+    globalRequestsPerMinute: "10000"
+    globalRequestsPerDay: "2000000"
+    tenantCapacityMultiplier: "2000"
+    defaultTenantRequestsPerHour: "2000"
+    defaultTenantRequestsPerMinute: "100"
+    defaultTenantRequestsPerDay: "32000"
+    ipRequestsPerHour: "5000"
+    ipRequestsPerMinute: "200"
+    ipRequestsPerDay: "64000"
+    agentInvokeRequestsPerHour: "2000"
+    agentInvokeRequestsPerMinute: "100"
+    agentInvokeRequestsPerDay: "32000"
+    externalApiRequestsPerHour: "300"
+    externalApiRequestsPerMinute: "20"
+    externalApiRequestsPerDay: "4800"
+    kaTenantMultiplier: "10"
+
+# Cloud-specific configuration
+# KA should provide these values based on their environment
+gcp:
+  enabled: false
+  projectId: ""
+  region: ""
+  keyVaultUrl: ""
+  serviceAccountKey: ""  # Base64 encoded service account key
+
+azure:
+  enabled: false
+  tenantId: ""
+  keyVaultUrl: ""
+  aksManagedIdentity: ""
+  storage:
+    type: "azure"
+    bucketUriPath: ""
+    adminBucketName: ""
+    userBucketName: ""
+    publicBucketName: ""
+    toolsImageBucketName: ""
+
+aws:
+  enabled: false
+  region: ""
+  accessKeyId: ""
+  secretAccessKey: ""
+  s3:
+    bucketName: ""
+    region: ""
+
+# External service configuration
+# KA can enable/disable these or use our defaults
+external:
+  # Database (KA can use external or our built-in)
+  database:
+    external: false
+    url: ""  # KA should provide if using external
+    host: "postgresql"
+    port: 5432
+    name: "workfx_ai"
+    user: "workfx_ai"
+    password: ""  # Will be auto-generated if not provided
+  
+  # Redis (KA can use external or our built-in)
+  redis:
+    external: false
+    url: ""  # KA should provide if using external
+    host: "redis"
+    port: 6379
+    password: ""  # Will be auto-generated if not provided
+  
+  # Elasticsearch (KA can use external or our built-in)
+  elasticsearch:
+    external: false
+    url: ""  # KA should provide if using external
+    host: "elasticsearch"
+    port: 9200
+    username: "elastic"
+    password: ""  # Will be auto-generated if not provided
+  
+  # RabbitMQ (KA can use external or our built-in)
+  rabbitmq:
+    external: false
+    url: ""  # KA should provide if using external
+    host: "rabbitmq"
+    port: 5672
+    username: "user"
+    password: ""  # Will be auto-generated if not provided
+
+# Built-in services (enabled by default, KA can disable if using external)
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: ""  # Will be auto-generated if not provided
+    database: "workfx_ai"
+    username: "workfx_ai"
+    password: ""  # Will be auto-generated if not provided
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "2Gi"
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: ""  # Will be auto-generated if not provided
+  master:
+    persistence:
+      enabled: true
+      size: 4Gi
     resources:
       limits:
         cpu: "500m"
-        memory: "512Mi"
+        memory: "1Gi"
       requests:
         cpu: "250m"
-        memory: "256Mi"
-    
-    # Health checks
-    livenessProbe:
+        memory: "512Mi"
+
+elasticsearch:
+  enabled: true
+  auth:
+    enabled: true
+    tls:
       enabled: true
-      path: /health
-      port: 5003
-      initialDelaySeconds: 30
-      timeoutSeconds: 5
-      periodSeconds: 30
-      failureThreshold: 3
-    
-    readinessProbe:
+  master:
+    persistence:
       enabled: true
-      path: /ready
-      port: 5003
-      initialDelaySeconds: 10
-      timeoutSeconds: 3
-      periodSeconds: 10
-      failureThreshold: 3
-    
-    # Service configuration
-    service:
-      type: ClusterIP
-      port: 5003
-      targetPort: 5003
-    
-    # Pod configuration
-    nodeSelector: {}
-    affinity: {}
-    tolerations: []
-    priorityClassName: ""
+      size: 10Gi
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
 
-# Database configuration
-postgresql:
-  enabled: false
-  # External database configuration
-  external:
-    enabled: false
-    host: ""
-    port: 5432
-    database: ""
-    username: ""
-    password: ""
-    sslMode: "require"
+rabbitmq:
+  enabled: true
+  auth:
+    username: "user"
+    password: ""  # Will be auto-generated if not provided
+  persistence:
+    enabled: true
+    size: 4Gi
+  resources:
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
 
-# Redis configuration
-redis:
-  enabled: false
-  # External Redis configuration
-  external:
-    enabled: false
-    host: ""
-    port: 6379
-    password: ""
-    username: ""
-    database: 0
-    ssl: false
-
-# Storage configuration
-storage:
-  enabled: false
-  type: "local"  # local, gcp, azure, aws
-  size: "1Gi"
-  
-  # Cloud storage configuration
-  gcp:
-    bucket: ""
-    projectId: ""
-    serviceAccountKey: ""
-  
-  azure:
-    accountName: ""
-    accountKey: ""
-    containerName: ""
-    endpoint: ""
-  
-  aws:
-    bucket: ""
-    region: ""
-    accessKey: ""
-    secretKey: ""
-
-# Monitoring configuration
+# Monitoring and observability
 monitoring:
-  enabled: false
-  
-  # Prometheus
+  # Prometheus metrics
   prometheus:
-    enabled: false
+    enabled: true
     serviceMonitor:
-      enabled: false
-      interval: "30s"
-      scrapeTimeout: "10s"
+      enabled: true
+      interval: 30s
   
-  # Grafana
+  # Grafana dashboards
   grafana:
     enabled: false
-    dashboards:
-      enabled: false
+    adminPassword: ""  # Will be auto-generated if not provided
+    persistence:
+      enabled: true
+      size: 2Gi
   
-  # Logging
-  logging:
+  # Jaeger tracing
+  jaeger:
     enabled: false
-    level: "INFO"
-
-# Development tools
-devTools:
-  enabled: false
-  
-  # AKHQ for Kafka management
-  akhq:
-    enabled: false
-    resources:
-      limits:
-        cpu: "200m"
-        memory: "256Mi"
-      requests:
-        cpu: "100m"
-        memory: "128Mi"
-  
-  # Kibana for log analysis
-  kibana:
-    enabled: false
-    resources:
-      limits:
-        cpu: "200m"
-        memory: "256Mi"
-      requests:
-        cpu: "100m"
-        memory: "128Mi"
+    persistence:
+      enabled: true
+      size: 2Gi
 
 # Security configuration
 security:
+  # Pod security context
+  podSecurityContext:
+    fsGroup: 1000
+    runAsNonRoot: true
+    runAsUser: 1000
+  
+  # Container security context
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+  
   # Network policies
   networkPolicy:
     enabled: false
@@ -291,200 +403,101 @@ security:
   rbac:
     enabled: true
     create: true
-    rules: []
-  
-  # Secrets management
-  secrets:
-    enabled: false
-    existingSecret: ""
-    data: {}
-  
-  # External secrets operator
-  externalSecrets:
-    enabled: false
-    secretStore:
-      name: ""
-      kind: "SecretStore"
-    refreshInterval: "15m"
-    data: {}
 
-# Backup configuration
+# Resource management
+resources:
+  # Default resource requests and limits
+  default:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  
+  # Storage classes
+  storageClasses:
+    default: ""
+    fast: ""
+    slow: ""
+
+# Backup and disaster recovery
 backup:
   enabled: false
-  schedule: "0 2 * * *"
-  retention: "7d"
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention: 7  # Keep backups for 7 days
+  storage:
+    type: "s3"  # s3, gcs, azure
+    bucket: ""
+    region: ""
+    credentials: ""
 
-# Maintenance configuration
-maintenance:
-  # Rolling updates
-  rollingUpdate:
-    maxSurge: 1
-    maxUnavailable: 0
-  
+# Advanced configuration
+advanced:
   # Pod disruption budget
   podDisruptionBudget:
     enabled: false
     minAvailable: 1
+  
+  # Horizontal pod autoscaler
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  # Pod anti-affinity
+  podAntiAffinity:
+    enabled: true
+    type: "preferred"  # preferred, required
+  
+  # Topology spread constraints
+  topologySpreadConstraints:
+    enabled: false
+    maxSkew: 1
+    topologyKey: "kubernetes.io/hostname"
+    whenUnsatisfiable: "DoNotSchedule"
 
-# Resource quotas
-resourceQuota:
-  enabled: false
-  limits:
-    cpu: "4"
-    memory: "8Gi"
-    persistentvolumeclaims: "10"
+# Custom configuration
+# KA can add any custom environment variables here
+custom:
+  env: {}
+  # Example:
+  # env:
+  #   CUSTOM_VAR: "custom_value"
+  #   ANOTHER_VAR: "another_value"
 
-# Node affinity and scheduling
-scheduling:
-  nodeSelector: {}
-  tolerations: []
-  affinity: {}
-
-# Configuration for different environments
-# These values can be overridden by environment-specific values files
-env:
-  # Development environment
-  dev:
-    workfx:
-      api:
-        replicas: 1
-        resources:
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
-          requests:
-            cpu: "250m"
-            memory: "256Mi"
-      cdc:
-        replicas: 1
-        resources:
-          limits:
-            cpu: "250m"
-            memory: "256Mi"
-          requests:
-            cpu: "125m"
-            memory: "128Mi"
-      idb:
-        replicas: 1
-        resources:
-          limits:
-            cpu: "250m"
-            memory: "256Mi"
-          requests:
-            cpu: "125m"
-            memory: "128Mi"
-    
-    devTools:
-      enabled: true
-    
-    monitoring:
-      enabled: true
-    
-    storage:
-      size: "500Mi"
+# Secrets configuration
+# KA should provide sensitive data here
+secrets:
+  # JWT keys
+  jwt:
+    secretKey: ""  # Will be auto-generated if not provided
+    audience: "https://www.workfx.ai"
+    issuer: "https://www.workfx.ai"
+    aiKey: ""  # Will be auto-generated if not provided
+    managementKey: ""  # Will be auto-generated if not provided
   
-  # Staging environment
-  staging:
-    workfx:
-      api:
-        replicas: 2
-        resources:
-          limits:
-            cpu: "1000m"
-            memory: "1Gi"
-          requests:
-            cpu: "500m"
-            memory: "512Mi"
-      cdc:
-        replicas: 2
-        resources:
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
-          requests:
-            cpu: "250m"
-            memory: "256Mi"
-      idb:
-        replicas: 2
-        resources:
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
-          requests:
-            cpu: "250m"
-            memory: "256Mi"
-    
-    autoscaling:
-      enabled: true
-    
-    storage:
-      size: "2Gi"
+  # External API keys
+  external:
+    openaiApiKey: ""
+    azureOpenaiApiKey: ""
+    anthropicApiKey: ""
+    cohereApiKey: ""
   
-  # Production environment
-  prod:
-    workfx:
-      api:
-        replicas: 3
-        resources:
-          limits:
-            cpu: "2000m"
-            memory: "2Gi"
-          requests:
-            cpu: "1000m"
-            memory: "1Gi"
-      cdc:
-        replicas: 3
-        resources:
-          limits:
-            cpu: "1000m"
-            memory: "1Gi"
-          requests:
-            cpu: "500m"
-            memory: "512Mi"
-      idb:
-        replicas: 3
-        resources:
-          limits:
-            cpu: "1000m"
-            memory: "1Gi"
-          requests:
-            cpu: "500m"
-            memory: "512Mi"
-    
-    autoscaling:
-      enabled: true
-    
-    monitoring:
-      enabled: true
-    
-    security:
-      networkPolicy:
-        enabled: true
-    
-    backup:
-      enabled: true
-    
-    storage:
-      size: "10Gi"
-
-# Cloud provider specific configurations
-cloudProviders:
-  gcp:
-    storageClass: "standard"
-    domain: "gcp.workfx.ai"
-    imageRegistry: "gcr.io"
+  # Database credentials (if using external)
+  database:
+    password: ""
   
-  azure:
-    storageClass: "managed-premium"
-    domain: "azure.workfx.ai"
-    imageRegistry: "azurecr.io"
+  # Redis credentials (if using external)
+  redis:
+    password: ""
   
-  aws:
-    storageClass: "gp2"
-    domain: "aws.workfx.ai"
-    imageRegistry: "public.ecr.aws"
+  # Elasticsearch credentials (if using external)
+  elasticsearch:
+    password: ""
   
-  local:
-    storageClass: "local-path"
-    domain: "local.workfx.ai"
-    imageRegistry: ""
+  # RabbitMQ credentials (if using external)
+  rabbitmq:
+    password: ""

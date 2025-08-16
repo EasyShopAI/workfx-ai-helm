@@ -1,0 +1,455 @@
+# =============================================================================
+# WorkFX AI - KA 自定义配置示例文件
+# =============================================================================
+# 此文件展示了 KA 如何自定义部署配置
+# 每个配置项都有详细注释，KA 可以根据自己的需求进行调整
+# =============================================================================
+
+# =============================================================================
+# 🌍 全局配置 (Global Configuration)
+# =============================================================================
+global:
+  # 环境标识 - 用于区分开发、测试、生产环境
+  environment: "dev"  # 可选值: dev, test, staging, prod
+  
+  # 云服务提供商 - 影响存储、网络等配置
+  cloudProvider: "gcp"  # 可选值: azure, aws, gcp, local
+  
+  # 域名配置 - KA 的对外访问域名
+  domain: "workfx.ai"  # 替换为 KA 的实际域名
+  
+  # 镜像仓库地址 - WorkFX AI 的 Docker 镜像仓库
+  imageRegistry: "us-central1-docker.pkg.dev/workfxai-dev/workfx-ai-gar-dev"
+  
+  # 镜像拉取策略 - 建议生产环境使用 IfNotPresent
+  imagePullPolicy: "IfNotPresent"  # 可选值: Always, IfNotPresent, Never
+  
+  # 镜像拉取密钥 - 如果使用私有镜像仓库需要配置
+  imagePullSecrets: []  # 例如: ["regcred"]
+
+# =============================================================================
+# 🐳 镜像配置 (Image Configuration)
+# =============================================================================
+image:
+  # API 服务镜像配置
+  api:
+    # 镜像标签 - 建议使用具体版本号，避免使用 latest
+    tag: "0.0.1-20250815-8acf2a3"  # 替换为实际需要的版本
+  
+  # 数据同步服务镜像配置
+  dataSync:
+    # 镜像标签 - 建议与 API 服务使用相同版本
+    tag: "0.0.1-20250815-8acf2a3"  # 替换为实际需要的版本
+
+# =============================================================================
+# 🚀 应用配置 (Application Configuration)
+# =============================================================================
+workfx:
+  # API 服务配置
+  api:
+    # 副本数量 - 根据负载需求调整
+    replicas: 1  # 生产环境建议至少 3 个副本
+    
+    # 资源限制和请求
+    resources:
+      # 资源上限 - 防止单个 Pod 占用过多资源
+      limits:
+        cpu: "4000m"      # CPU 限制 (4 核)
+        memory: "8Gi"     # 内存限制 (8GB)
+      # 资源请求 - 确保 Pod 有足够的资源运行
+      requests:
+        cpu: "2000m"      # CPU 请求 (2 核)
+        memory: "4Gi"     # 内存请求 (4GB)
+    
+    # 入口配置 - 对外访问的 HTTP/HTTPS 路由
+    ingress:
+      enabled: false       # 是否启用入口
+      # 主机配置
+      hosts:
+        - host: workfx.ai  # 替换为实际域名
+          paths:
+            - path: /                   # 路径前缀
+              pathType: Prefix          # 路径类型
+      # TLS 配置 - HTTPS 证书
+      tls:
+        - secretName: workfx-ai-tls    # TLS 密钥名称
+          hosts:
+            - workfx.ai    # 替换为实际域名
+    
+    # 自动扩缩容配置
+    autoscaling:
+      enabled: true                    # 是否启用自动扩缩容
+      minReplicas: 5                  # 最小副本数
+      maxReplicas: 20                 # 最大副本数
+      targetCPUUtilizationPercentage: 60    # CPU 使用率目标 (60%)
+      targetMemoryUtilizationPercentage: 70 # 内存使用率目标 (70%)
+  
+  # 数据同步服务配置
+  dataSync:
+    replicas: 1  # 数据同步服务副本数
+    resources:
+      limits:
+        cpu: "2000m"      # CPU 限制 (2 核)
+        memory: "4Gi"     # 内存限制 (4GB)
+      requests:
+        cpu: "1000m"      # CPU 请求 (1 核)
+        memory: "2Gi"     # 内存请求 (2GB)
+
+# =============================================================================
+# ⚙️ 应用配置覆盖 (Configuration Overrides)
+# =============================================================================
+config:
+  # 环境标识
+  environment: "dev"
+  
+  # 云服务提供商
+  cloudProvider: "gcp"
+  
+  # KA 公司名称标识
+  kaName: "workfx"  # 替换为 KA 的实际公司名称
+  
+  # 模型配置 - KA 使用的 AI 模型
+  models:
+    # 嵌入模型配置
+    embedding:
+      provider: "azure_openai"        # 模型提供商
+      name: "text-embedding-ada-002" # 模型名称
+    
+    # 重排序模型配置
+    rerank:
+      provider: "azure_ai_foundry"   # 模型提供商
+      name: "Cohere-rerank-v3.5"    # 模型名称
+  
+  # RAG 检索配置 - 优化生产环境性能
+  rag:
+    summaryBoost: "2.5"              # 摘要提升权重
+    contentBoost: "1.2"              # 内容提升权重
+    distilledKnowledgeBoost: "1.8"   # 蒸馏知识提升权重
+    keywordsBoost: "1.1"             # 关键词提升权重
+    defaultSearchLimit: "20"         # 默认搜索限制
+    maxSearchLimit: "200"            # 最大搜索限制
+    defaultVectorK: "20"             # 默认向量检索数量
+    defaultNumCandidates: "200"      # 默认候选数量
+    vectorSimilarityThreshold: "0.6" # 向量相似度阈值
+    rerankTopK: "30"                 # 重排序 Top-K
+    rerankScoreThreshold: "0.6"      # 重排序分数阈值
+    searchTimeout: "45.0"            # 搜索超时时间 (秒)
+    embeddingTimeout: "15.0"         # 嵌入超时时间 (秒)
+    enableCaching: "true"            # 是否启用缓存
+    cacheTtlSeconds: "600"           # 缓存 TTL (秒)
+  
+  # 速率限制配置 - 生产环境设置
+  rateLimit:
+    enabled: true                     # 是否启用速率限制
+    globalRequestsPerHour: "500000"   # 全局每小时请求限制
+    globalRequestsPerMinute: "50000"  # 全局每分钟请求限制
+    globalRequestsPerDay: "10000000"  # 全局每天请求限制
+    tenantCapacityMultiplier: "5000"  # 租户容量倍数
+    defaultTenantRequestsPerHour: "10000"    # 默认租户每小时请求限制
+    defaultTenantRequestsPerMinute: "500"    # 默认租户每分钟请求限制
+    defaultTenantRequestsPerDay: "100000"    # 默认租户每天请求限制
+    ipRequestsPerHour: "20000"       # IP 每小时请求限制
+    ipRequestsPerMinute: "1000"      # IP 每分钟请求限制
+    ipRequestsPerDay: "200000"       # IP 每天请求限制
+    agentInvokeRequestsPerHour: "10000"      # 代理调用每小时请求限制
+    agentInvokeRequestsPerMinute: "500"      # 代理调用每分钟请求限制
+    agentInvokeRequestsPerDay: "100000"      # 代理调用每天请求限制
+    externalApiRequestsPerHour: "1000"       # 外部 API 每小时请求限制
+    externalApiRequestsPerMinute: "100"      # 外部 API 每分钟请求限制
+    externalApiRequestsPerDay: "20000"       # 外部 API 每天请求限制
+    kaTenantMultiplier: "20"         # KA 租户倍数
+
+# =============================================================================
+# ☁️ Azure 特定配置 (Azure-specific Configuration)
+# =============================================================================
+azure:
+  enabled: true                       # 是否启用 Azure 配置
+  
+  # Azure 租户 ID
+  tenantId: "ka-tenant-id-here"      # 替换为 KA 的 Azure 租户 ID
+  
+  # Azure Key Vault URL
+  keyVaultUrl: "https://ka-keyvault.vault.azure.net/"  # 替换为实际 Key Vault URL
+  
+  # AKS 托管身份
+  aksManagedIdentity: "ka-managed-identity-here"  # 替换为实际托管身份
+  
+  # 存储配置
+  storage:
+    type: "azure"                     # 存储类型
+    bucketUriPath: "https://kastorage.blob.core.windows.net/"  # 存储账户 URI
+    adminBucketName: "ka-admin-bucket"      # 管理存储桶名称
+    userBucketName: "ka-user-bucket"        # 用户存储桶名称
+    publicBucketName: "ka-public-bucket"    # 公共存储桶名称
+    toolsImageBucketName: "ka-tools-image-bucket"  # 工具镜像存储桶名称
+
+# =============================================================================
+# 🔗 外部服务配置 (External Service Configuration)
+# =============================================================================
+# 如果 KA 使用自己的服务，请设置为 true 并提供连接信息
+external:
+  # 数据库服务
+  database:
+    external: true                    # 是否使用外部数据库
+    url: "postgresql://ka-user:ka-password@ka-db-host:5432/ka_workfx_db"  # 数据库连接 URL
+  
+  # Redis 缓存服务
+  redis:
+    external: true                    # 是否使用外部 Redis
+    url: "redis://ka-user:ka-password@ka-redis-host:6379"  # Redis 连接 URL
+  
+  # Elasticsearch 搜索引擎
+  elasticsearch:
+    external: true                    # 是否使用外部 Elasticsearch
+    url: "http://ka-user:ka-password@ka-es-host:9200"  # Elasticsearch 连接 URL
+  
+  # Kafka 消息队列
+  kafka:
+    external: true                    # 是否使用外部 Kafka
+    bootstrapServers: "ka-kafka-host:9092"  # Kafka 服务器地址
+    # 如果需要认证，取消注释以下行
+    # username: "ka-kafka-user"
+    # password: "ka-kafka-password"
+
+# =============================================================================
+# 🗄️ 依赖服务配置 (Dependency Services Configuration)
+# =============================================================================
+# 重要: 如果 KA 使用外部服务，请将对应的 enabled 设置为 false
+# 如果 KA 希望我们部署这些服务，请将 enabled 设置为 true
+
+# PostgreSQL 数据库
+postgresql:
+  enabled: false                      # 是否部署 PostgreSQL (false = 使用外部数据库)
+  # 如果 enabled: true，以下配置生效
+  # auth:
+  #   postgresPassword: "your-postgres-password"
+  #   database: "workfx_ai"
+  # primary:
+  #   persistence:
+  #     size: 100Gi
+
+# Redis 缓存
+redis:
+  enabled: false                      # 是否部署 Redis (false = 使用外部 Redis)
+  # 如果 enabled: true，以下配置生效
+  # auth:
+  #   password: "your-redis-password"
+  # master:
+  #   persistence:
+  #     size: 50Gi
+
+# Elasticsearch 搜索引擎
+elasticsearch:
+  enabled: true                      # 是否部署 Elasticsearch (false = 使用外部 Elasticsearch)
+  # 如果 enabled: true，以下配置生效
+  # auth:
+  #   password: "your-elasticsearch-password"
+  # master:
+  #   persistence:
+  #     size: 100Gi
+
+# Kibana 可视化界面
+kibana:
+  enabled: true                      # 是否部署 Kibana (false = 使用外部 Kibana)
+  # 如果 enabled: true，以下配置生效
+  # auth:
+  #   password: "your-kibana-password"
+
+# Kafka 消息队列
+kafka:
+  enabled: true                      # 是否部署 Kafka (false = 使用外部 Kafka)
+  # 如果 enabled: true，以下配置生效
+  # auth:
+  #   password: "your-kafka-password"
+  # persistence:
+  #   size: 100Gi
+
+# AKHQ Kafka 管理界面
+akhq:
+  enabled: true                      # 是否部署 AKHQ (false = 使用外部管理界面)
+
+# =============================================================================
+# 📊 监控和可观测性 (Monitoring and Observability)
+# =============================================================================
+#monitoring:
+#  # Prometheus 指标收集
+#  prometheus:
+#    enabled: true                     # 是否启用 Prometheus
+#
+#  # Grafana 可视化面板
+#  grafana:
+#    enabled: true                     # 是否启用 Grafana
+#    adminPassword: "ka-grafana-password"  # 替换为安全的密码
+#
+#  # Jaeger 分布式追踪
+#  jaeger:
+#    enabled: true                     # 是否启用 Jaeger
+
+# =============================================================================
+# 🔒 安全配置 (Security Configuration)
+# =============================================================================
+#security:
+#  # Pod 安全上下文
+#  podSecurityContext:
+#    fsGroup: 1000                     # 文件系统组 ID
+#    runAsNonRoot: true                # 不以 root 用户运行
+#    runAsUser: 1000                   # 运行用户 ID
+#
+#  # 容器安全上下文
+#  containerSecurityContext:
+#    allowPrivilegeEscalation: false   # 不允许权限提升
+#    capabilities:
+#      drop:
+#        - ALL                          # 删除所有 Linux 能力
+#    readOnlyRootFilesystem: true      # 只读根文件系统
+#    runAsNonRoot: true                # 不以 root 用户运行
+#    runAsUser: 1000                   # 运行用户 ID
+#
+#  # 网络策略
+#  networkPolicy:
+#    enabled: true                     # 是否启用网络策略
+#
+#  # RBAC 权限控制
+#  rbac:
+#    enabled: true                     # 是否启用 RBAC
+#    create: true                      # 是否创建 RBAC 资源
+
+# =============================================================================
+# ⚡ 高级配置 (Advanced Configuration)
+# =============================================================================
+advanced:
+  # Pod 中断预算
+  podDisruptionBudget:
+    enabled: true                     # 是否启用 Pod 中断预算
+    minAvailable: 3                   # 最少可用 Pod 数量
+  
+  # 水平 Pod 自动扩缩容
+  hpa:
+    enabled: true                     # 是否启用 HPA
+    minReplicas: 5                   # 最小副本数
+    maxReplicas: 20                  # 最大副本数
+    targetCPUUtilizationPercentage: 60     # CPU 使用率目标
+    targetMemoryUtilizationPercentage: 70  # 内存使用率目标
+  
+  # Pod 反亲和性 - 确保高可用性
+  podAntiAffinity:
+    enabled: true                     # 是否启用 Pod 反亲和性
+    type: "required"                  # 类型: required (严格) 或 preferred (优先)
+  
+  # 拓扑分布约束 - 跨节点分布 Pod
+  topologySpreadConstraints:
+    enabled: true                     # 是否启用拓扑分布约束
+    maxSkew: 1                        # 最大偏差
+    topologyKey: "kubernetes.io/hostname"  # 拓扑键
+    whenUnsatisfiable: "DoNotSchedule"     # 不满足时的行为
+
+# =============================================================================
+# 🏢 KA 自定义配置 (KA Custom Configuration)
+# =============================================================================
+custom:
+  # 环境变量配置
+  env:
+    KA_COMPANY_ID: "ka-company-123"           # KA 公司 ID
+    KA_ENVIRONMENT: "production"               # KA 环境标识
+    KA_DEPLOYMENT_REGION: "eastus2"           # 部署区域
+    KA_BUSINESS_UNIT: "ai-platform"           # 业务单元
+    KA_CONTACT_EMAIL: "ai-team@ka-company.com" # 联系邮箱
+    KA_SLA_LEVEL: "99.9"                      # SLA 级别
+    KA_BACKUP_RETENTION: "30"                 # 备份保留天数
+    KA_MONITORING_ENDPOINT: "https://monitoring.ka-company.com"  # 监控端点
+    KA_ALERT_WEBHOOK: "https://alerts.ka-company.com/webhook"   # 告警 Webhook
+
+# =============================================================================
+# 🔐 密钥配置 (Secrets Configuration)
+# =============================================================================
+# 重要: 这些是敏感信息，建议使用 Kubernetes Secrets 或外部密钥管理
+secrets:
+  # JWT 配置
+  jwt:
+    secretKey: "ka-jwt-secret-key-here"       # JWT 密钥
+    audience: "https://workfx.ka-company.com" # JWT 受众
+    issuer: "https://workfx.ka-company.com"   # JWT 签发者
+    aiKey: "ka-ai-jwt-key-here"               # AI 服务 JWT 密钥
+    managementKey: "ka-management-jwt-key-here" # 管理服务 JWT 密钥
+  
+  # 外部 API 密钥
+  external:
+    openaiApiKey: "ka-openai-key-here"        # OpenAI API 密钥
+    azureOpenaiApiKey: "ka-azure-openai-key-here"  # Azure OpenAI API 密钥
+    anthropicApiKey: "ka-anthropic-key-here"  # Anthropic API 密钥
+    cohereApiKey: "ka-cohere-key-here"        # Cohere API 密钥
+  
+  # 外部服务凭据
+  database:
+    password: "ka-db-password-here"           # 数据库密码
+  
+  redis:
+    password: "ka-redis-password-here"        # Redis 密码
+  
+  elasticsearch:
+    password: "ka-es-password-here"           # Elasticsearch 密码
+  
+  kafka:
+    password: "ka-kafka-password-here"        # Kafka 密码
+
+# =============================================================================
+# 💾 备份配置 (Backup Configuration)
+# =============================================================================
+backup:
+  enabled: true                      # 是否启用备份
+  schedule: "0 1 * * *"             # 备份计划 (每天凌晨 1 点)
+  retention: 30                      # 备份保留天数
+  storage:
+    type: "azure"                    # 存储类型
+    bucket: "ka-backup-bucket"       # 备份存储桶
+    region: "eastus2"                # 存储区域
+    credentials: "ka-backup-credentials"  # 存储凭据
+
+# =============================================================================
+# 💾 资源管理 (Resource Management)
+# =============================================================================
+resources:
+  # 存储类配置
+  storageClasses:
+    default: "managed-premium"       # 默认存储类 (Azure 高级存储)
+    fast: "managed-premium"          # 快速存储类
+    slow: "managed-standard"         # 慢速存储类
+
+# =============================================================================
+# 📝 部署说明 (Deployment Instructions)
+# =============================================================================
+# 使用此配置文件部署 WorkFX AI:
+#
+# 1. 基本部署:
+#    helm install workfx-ai ./charts/workfx-ai \
+#      --create-namespace \
+#      --namespace workfx-ai \
+#      -f values-ka-example.yaml
+#
+# 2. 自定义配置部署:
+#    helm install workfx-ai ./charts/workfx-ai \
+#      --create-namespace \
+#      --namespace workfx-ai \
+#      -f values-ka-example.yaml \
+#      --set global.domain=your-domain.com \
+#      --set workfx.api.replicas=10
+#
+# 3. 升级现有部署:
+#    helm upgrade workfx-ai ./charts/workfx-ai \
+#      --namespace workfx-ai \
+#      -f values-ka-example.yaml
+#
+# 4. 卸载部署:
+#    helm uninstall workfx-ai --namespace workfx-ai
+#
+# =============================================================================
+# ⚠️ 重要提醒 (Important Notes)
+# =============================================================================
+# 1. 请根据实际环境修改所有占位符值
+# 2. 生产环境请使用安全的密码和密钥
+# 3. 建议使用外部密钥管理系统存储敏感信息
+# 4. 根据实际负载调整资源限制和副本数量
+# 5. 确保网络策略和安全配置符合公司要求
+# 6. 定期备份数据和配置
+# 7. 监控系统性能和资源使用情况
+# =============================================================================

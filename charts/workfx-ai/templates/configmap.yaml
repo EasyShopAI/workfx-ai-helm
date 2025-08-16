@@ -12,19 +12,76 @@ data:
   
   # OpenTelemetry configuration
   ENABLE_OPTEL: {{ .Values.config.enableOtel | quote }}
-  OTEL_SERVICE_NAME: {{ .Values.config.otelServiceName | quote }}
+  OTEL_SERVICE_NAME: "{{ include "workfx-ai.fullname" . }}"
   
-  {{- if .Values.config.applicationInsightsConnectionString }}
-  APPLICATIONINSIGHTS_CONNECTION_STRING: {{ .Values.config.applicationInsightsConnectionString | quote }}
+  # Model configuration
+  EMBEDDING_MODEL_PROVIDER: {{ .Values.config.models.embedding.provider | quote }}
+  EMBEDDING_MODEL_NAME: {{ .Values.config.models.embedding.name | quote }}
+  RERANK_MODEL_PROVIDER: {{ .Values.config.models.rerank.provider | quote }}
+  RERANK_MODEL_NAME: {{ .Values.config.models.rerank.name | quote }}
+  
+  # RAG configuration
+  RAG_SUMMARY_BOOST: {{ .Values.config.rag.summaryBoost | quote }}
+  RAG_CONTENT_BOOST: {{ .Values.config.rag.contentBoost | quote }}
+  RAG_DISTILLED_KNOWLEDGE_BOOST: {{ .Values.config.rag.distilledKnowledgeBoost | quote }}
+  RAG_KEYWORDS_BOOST: {{ .Values.config.rag.keywordsBoost | quote }}
+  RAG_DEFAULT_SEARCH_LIMIT: {{ .Values.config.rag.defaultSearchLimit | quote }}
+  RAG_MAX_SEARCH_LIMIT: {{ .Values.config.rag.maxSearchLimit | quote }}
+  RAG_DEFAULT_VECTOR_K: {{ .Values.config.rag.defaultVectorK | quote }}
+  RAG_DEFAULT_NUM_CANDIDATES: {{ .Values.config.rag.defaultNumCandidates | quote }}
+  RAG_VECTOR_SIMILARITY_THRESHOLD: {{ .Values.config.rag.vectorSimilarityThreshold | quote }}
+  RAG_RERANK_TOP_K: {{ .Values.config.rag.rerankTopK | quote }}
+  RAG_RERANK_SCORE_THRESHOLD: {{ .Values.config.rag.rerankScoreThreshold | quote }}
+  RAG_SEARCH_TIMEOUT: {{ .Values.config.rag.searchTimeout | quote }}
+  RAG_EMBEDDING_TIMEOUT: {{ .Values.config.rag.embeddingTimeout | quote }}
+  RAG_ENABLE_CACHING: {{ .Values.config.rag.enableCaching | quote }}
+  RAG_CACHE_TTL_SECONDS: {{ .Values.config.rag.cacheTtlSeconds | quote }}
+  
+  # Rate limiting configuration
+  RATE_LIMIT_ENABLED: {{ .Values.config.rateLimit.enabled | quote }}
+  RATE_LIMIT_REDIS_KEY_PREFIX: {{ .Values.config.rateLimit.redisKeyPrefix | quote }}
+  RATE_LIMIT_REDIS_KEY_EXPIRE_BUFFER: {{ .Values.config.rateLimit.redisKeyExpireBuffer | quote }}
+  RATE_LIMIT_IP_ENABLED: {{ .Values.config.rateLimit.ipEnabled | quote }}
+  RATE_LIMIT_TENANT_ENABLED: {{ .Values.config.rateLimit.tenantEnabled | quote }}
+  RATE_LIMIT_AGENT_MESSAGE_ENABLED: {{ .Values.config.rateLimit.agentMessageEnabled | quote }}
+  RATE_LIMIT_MINUTE_WINDOW: {{ .Values.config.rateLimit.minuteWindow | quote }}
+  RATE_LIMIT_HOUR_WINDOW: {{ .Values.config.rateLimit.hourWindow | quote }}
+  RATE_LIMIT_DAILY_LIMIT_HOURS: {{ .Values.config.rateLimit.dailyLimitHours | quote }}
+  RATE_LIMIT_IP_TENANT_RATIO: {{ .Values.config.rateLimit.ipTenantRatio | quote }}
+  RATE_LIMIT_GLOBAL_REQUESTS_PER_HOUR: {{ .Values.config.rateLimit.globalRequestsPerHour | quote }}
+  RATE_LIMIT_GLOBAL_REQUESTS_PER_MINUTE: {{ .Values.config.rateLimit.globalRequestsPerMinute | quote }}
+  RATE_LIMIT_GLOBAL_REQUESTS_PER_DAY: {{ .Values.config.rateLimit.globalRequestsPerDay | quote }}
+  RATE_LIMIT_TENANT_CAPACITY_MULTIPLIER: {{ .Values.config.rateLimit.tenantCapacityMultiplier | quote }}
+  RATE_LIMIT_DEFAULT_TENANT_REQUESTS_PER_HOUR: {{ .Values.config.rateLimit.defaultTenantRequestsPerHour | quote }}
+  RATE_LIMIT_DEFAULT_TENANT_REQUESTS_PER_MINUTE: {{ .Values.config.rateLimit.defaultTenantRequestsPerMinute | quote }}
+  RATE_LIMIT_DEFAULT_TENANT_REQUESTS_PER_DAY: {{ .Values.config.rateLimit.defaultTenantRequestsPerDay | quote }}
+  RATE_LIMIT_IP_REQUESTS_PER_HOUR: {{ .Values.config.rateLimit.ipRequestsPerHour | quote }}
+  RATE_LIMIT_IP_REQUESTS_PER_MINUTE: {{ .Values.config.rateLimit.ipRequestsPerMinute | quote }}
+  RATE_LIMIT_IP_REQUESTS_PER_DAY: {{ .Values.config.rateLimit.ipRequestsPerDay | quote }}
+  RATE_LIMIT_AGENT_INVOKE_REQUESTS_PER_HOUR: {{ .Values.config.rateLimit.agentInvokeRequestsPerHour | quote }}
+  RATE_LIMIT_AGENT_INVOKE_REQUESTS_PER_MINUTE: {{ .Values.config.rateLimit.agentInvokeRequestsPerMinute | quote }}
+  RATE_LIMIT_AGENT_INVOKE_REQUESTS_PER_DAY: {{ .Values.config.rateLimit.agentInvokeRequestsPerDay | quote }}
+  RATE_LIMIT_EXTERNAL_API_REQUESTS_PER_HOUR: {{ .Values.config.rateLimit.externalApiRequestsPerHour | quote }}
+  RATE_LIMIT_EXTERNAL_API_REQUESTS_PER_MINUTE: {{ .Values.config.rateLimit.externalApiRequestsPerMinute | quote }}
+  RATE_LIMIT_EXTERNAL_API_REQUESTS_PER_DAY: {{ .Values.config.rateLimit.externalApiRequestsPerDay | quote }}
+  RATE_LIMIT_KA_TENANT_MULTIPLIER: {{ .Values.config.rateLimit.kaTenantMultiplier | quote }}
+  
+  # Cloud-specific configuration
+  {{- if eq .Values.config.cloudProvider "gcp" }}
+  {{- if .Values.gcp.enabled }}
+  GCP_PROJECT_ID: {{ .Values.gcp.projectId | quote }}
+  GCP_REGION: {{ .Values.gcp.region | quote }}
+  {{- if .Values.gcp.keyVaultUrl }}
+  AZURE_KEYVAULT_URL: {{ .Values.gcp.keyVaultUrl | quote }}
+  {{- end }}
+  {{- end }}
   {{- end }}
   
-  # Azure-specific configuration
   {{- if eq .Values.config.cloudProvider "azure" }}
+  {{- if .Values.azure.enabled }}
   TENANT_ID: {{ .Values.azure.tenantId | quote }}
   AZURE_KEYVAULT_URL: {{ .Values.azure.keyVaultUrl | quote }}
   AKS_MANAGED_IDENTITY: {{ .Values.azure.aksManagedIdentity | quote }}
-  
-  # Storage configuration
   STORAGE_TYPE: {{ .Values.azure.storage.type | quote }}
   STORAGE_BUCKET_URI_PATH: {{ .Values.azure.storage.bucketUriPath | quote }}
   STORAGE_ADMIN_BUCKET_NAME: {{ .Values.azure.storage.adminBucketName | quote }}
@@ -32,26 +89,73 @@ data:
   STORAGE_PUBLIC_BUCKET_NAME: {{ .Values.azure.storage.publicBucketName | quote }}
   STORAGE_TOOLS_IMAGE_BUCKET_NAME: {{ .Values.azure.storage.toolsImageBucketName | quote }}
   {{- end }}
+  {{- end }}
   
-  # Model configuration
-  EMBEDDING_MODEL_PROVIDER: {{ .Values.models.embedding.provider | quote }}
-  EMBEDDING_MODEL_NAME: {{ .Values.models.embedding.name | quote }}
-  RERANK_MODEL_PROVIDER: {{ .Values.models.rerank.provider | quote }}
-  RERANK_MODEL_NAME: {{ .Values.models.rerank.name | quote }}
+  {{- if eq .Values.config.cloudProvider "aws" }}
+  {{- if .Values.aws.enabled }}
+  AWS_REGION: {{ .Values.aws.region | quote }}
+  STORAGE_TYPE: "aws"
+  STORAGE_BUCKET_URI_PATH: "https://{{ .Values.aws.s3.bucketName }}.s3.{{ .Values.aws.s3.region }}.amazonaws.com/"
+  STORAGE_ADMIN_BUCKET_NAME: {{ .Values.aws.s3.bucketName | quote }}
+  STORAGE_USER_BUCKET_NAME: {{ .Values.aws.s3.bucketName | quote }}
+  STORAGE_PUBLIC_BUCKET_NAME: {{ .Values.aws.s3.bucketName | quote }}
+  STORAGE_TOOLS_IMAGE_BUCKET_NAME: {{ .Values.aws.s3.bucketName | quote }}
+  {{- end }}
+  {{- end }}
   
   # Service endpoints (internal)
   {{- $fullname := include "workfx-ai.fullname" . }}
   {{- $namespace := .Release.Namespace }}
-  MANAGEMENT_INTERNAL_SERVICE_ENDPOINT: "http://{{ $fullname }}:{{ .Values.service.port }}"
-  AI_INTERNAL_SERVICE_ENDPOINT: "http://{{ $fullname }}:{{ .Values.service.port }}"
-  MANAGEMENT_INTERNAL_SERVICE_ENDPOINT_WITH_NAMESPACE: "http://{{ $fullname }}.{{ $namespace }}.svc.cluster.local:{{ .Values.service.port }}"
+  MANAGEMENT_INTERNAL_SERVICE_ENDPOINT: "http://{{ $fullname }}-api:{{ .Values.workfx.api.service.port }}"
+  AI_INTERNAL_SERVICE_ENDPOINT: "http://{{ $fullname }}-api:{{ .Values.workfx.api.service.port }}"
+  MANAGEMENT_INTERNAL_SERVICE_ENDPOINT_WITH_NAMESPACE: "http://{{ $fullname }}-api.{{ $namespace }}.svc.cluster.local:{{ .Values.workfx.api.service.port }}"
   
-  # Elasticsearch configuration
-  {{- if .Values.elasticsearch.enabled }}
-  ELASTICSEARCH_URL: {{ .Values.elasticsearch.url | quote }}
+  # External service endpoints (if using external services)
+  {{- if .Values.external.database.external }}
+  DATABASE_URL: {{ .Values.external.database.url | quote }}
+  {{- else }}
+  DATABASE_HOST: {{ .Values.external.database.host | quote }}
+  DATABASE_PORT: {{ .Values.external.database.port | quote }}
+  DATABASE_NAME: {{ .Values.external.database.name | quote }}
+  DATABASE_USER: {{ .Values.external.database.user | quote }}
   {{- end }}
   
-  # Kafka configuration  
-  {{- if .Values.kafka.enabled }}
-  KAFKA_BROKERS: {{ .Values.kafka.brokers | quote }}
+  {{- if .Values.external.redis.external }}
+  REDIS_URL: {{ .Values.external.redis.url | quote }}
+  {{- else }}
+  REDIS_HOST: {{ .Values.external.redis.host | quote }}
+  REDIS_PORT: {{ .Values.external.redis.port | quote }}
+  {{- end }}
+  
+  {{- if .Values.external.elasticsearch.external }}
+  ELASTICSEARCH_URL: {{ .Values.external.elasticsearch.url | quote }}
+  {{- else }}
+  ELASTICSEARCH_URL: "http://{{ $fullname }}-elasticsearch:{{ .Values.external.elasticsearch.port }}"
+  {{- end }}
+  
+  {{- if .Values.external.rabbitmq.external }}
+  RABBITMQ_URL: {{ .Values.external.rabbitmq.url | quote }}
+  {{- else }}
+  RABBITMQ_HOST: {{ .Values.external.rabbitmq.host | quote }}
+  RABBITMQ_PORT: {{ .Values.external.rabbitmq.port | quote }}
+  RABBITMQ_USER: {{ .Values.external.rabbitmq.username | quote }}
+  {{- end }}
+  
+  # URL Extractor Configuration
+  URL_EXTRACTOR_SITEMAP_MAX_SIZE: "10485760"
+  URL_EXTRACTOR_SITEMAP_TIMEOUT: "15"
+  URL_EXTRACTOR_MAX_SITEMAP_INDEX_SIZE: "100"
+  URL_EXTRACTOR_JINA_BASE_URL: "https://r.jina.ai/"
+  URL_EXTRACTOR_JINA_TIMEOUT: "30"
+  URL_EXTRACTOR_ENABLE_SITEMAP: "true"
+  URL_EXTRACTOR_ENABLE_PROVIDER: "true"
+  URL_EXTRACTOR_ENABLE_DUPLICATE_REMOVAL: "true"
+  
+  # Development specific settings
+  LOG_LEVEL: "INFO"
+  IS_TEST: "False"
+  
+  # Custom environment variables (KA can add any custom config here)
+  {{- range $key, $value := .Values.custom.env }}
+  {{ $key }}: {{ $value | quote }}
   {{- end }}
